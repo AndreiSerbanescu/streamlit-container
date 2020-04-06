@@ -11,14 +11,7 @@ import pydicom
 import concurrent.futures
 import SimpleITK as sitk
 import logging
-# from lungmask import lungmask
-if os.environ.get("ENVIRONMENT", '') == "docker":
-    from lungmask_docker import lungmask
-    from lungmask_docker import utils
-else:
-    from lungmask import utils
-    from lungmask import lungmask
-
+import segmenter
 from pathlib import Path
 import dicom2nifti
 from pydicom.pixel_data_handlers import gdcm_handler, pillow_handler
@@ -124,7 +117,12 @@ if __name__ == "__main__":
         if st.button('download and analyse'):
             latest_iteration = st.empty()
             bar = st.progress(0)
-            dir_ = os.path.join('/tmp/', subject_name)
+
+            shared_dir = os.environ['DATA_SHARE_PATH']
+
+            # TODO this is slightly hardcoded
+            # TODO relies on the fact that both containers have the same path for the shared dir
+            dir_ = os.path.join('{}/tmp/'.format(shared_dir), subject_name)
             scan.download_dir(dir_, verbose=True)
             download_dir = ''
             for path in Path(dir_).rglob('*.dcm'):
@@ -134,17 +132,27 @@ if __name__ == "__main__":
 
             st.text('Analysis progress...')
             bar2 = st.progress(0)
-            model = lungmask.get_model('unet', 'R231CovidWeb')
-            input_image = utils.get_input_image(download_dir)
-            input_nda = sitk.GetArrayFromImage(input_image)
-            print(input_nda.shape)
-            zd, yd, xd = input_nda.shape
 
-            spx, spy, spz = input_image.GetSpacing()
-            result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
+            # model = lungmask.get_model('unet', 'R231CovidWeb')
+            # input_image = utils.get_input_image(download_dir)
+            # input_nda = sitk.GetArrayFromImage(input_image)
+            # print(input_nda.shape)
+            # zd, yd, xd = input_nda.shape
+            #
+            # spx, spy, spz = input_image.GetSpacing()
+            # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
+
+
+            # without bar
+            filename = os.path.join(download_dir, file)
+            print(filename)
+            result = segmenter.lungmask_segment(filename, model_name='R231CovidWeb')
+
+            print("Result is:")
+            print(result)
 
             result_out = sitk.GetImageFromArray(result)
-            result_out.CopyInformation(input_image)
+            # result_out.CopyInformation(input_image)
             sitk.WriteImage(result_out, os.path.join(dir_, 'segmentation.nii.gz'))
             bar2.progress(100)
 

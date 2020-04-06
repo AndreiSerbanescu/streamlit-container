@@ -18,8 +18,10 @@ RUN pip3 install SimpleITK
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 
+RUN apt-get install curl -y #debugging
+
 COPY main.py /app/main.py
-COPY lungmask_docker.py /app/lungmask_docker.py
+COPY segmenter.py /app/segmenter.py
 COPY plotter/__init__.py /app/plotter/__init__.py
 COPY plotter/generateHUplots.py /app/plotter/generateHUplots.py
 COPY lung.png /app/lung.png
