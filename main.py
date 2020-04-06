@@ -11,8 +11,8 @@ import pydicom
 import concurrent.futures
 import SimpleITK as sitk
 import logging
-from lungmask import lungmask
-from lungmask import utils
+# from lungmask import lungmask
+# from lungmask import utils
 from pathlib import Path
 import dicom2nifti
 from pydicom.pixel_data_handlers import gdcm_handler, pillow_handler

@@ -12,6 +12,11 @@ RUN pip3 install streamlit
 RUN pip3 install sklearn
 RUN pip3 install xnat
 RUN pip3 install dicom2nifti
+RUN pip3 install matplotlib
+RUN pip3 install SimpleITK
+
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+RUN apt-get install -y locales && locale-gen en_US.UTF-8
 
 COPY main.py /app/main.py
 COPY plotter/__init__.py /app/plotter/__init__.py
