@@ -19,6 +19,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 
 COPY main.py /app/main.py
+COPY lungmask_docker.py /app/lungmask_docker.py
 COPY plotter/__init__.py /app/plotter/__init__.py
 COPY plotter/generateHUplots.py /app/plotter/generateHUplots.py
 COPY lung.png /app/lung.png

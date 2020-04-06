@@ -12,7 +12,7 @@ import concurrent.futures
 import SimpleITK as sitk
 import logging
 # from lungmask import lungmask
-if os.environ["ENVIRONMENT"] == "docker":
+if os.environ.get("ENVIRONMENT", '') == "docker":
     from lungmask_docker import lungmask
     from lungmask_docker import utils
 else:
