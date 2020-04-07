@@ -6,6 +6,28 @@ import json
 
 def lungmask_segment(source_dir, model_name='R231CovidWeb'):
 
+    if os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE":
+        return __docker_lungmask_segment(source_dir, model_name=model_name)
+
+    return __host_lungmask_segment(source_dir, model_name=model_name)
+
+def __host_lungmask_segment(source_dir, model_name):
+
+    from lungmask import lungmask
+    from lungmask import utils
+    import SimpleITK as sitk
+
+    model = lungmask.get_model('unet', model_name)
+    input_image = utils.get_input_image(source_dir)
+    input_nda = sitk.GetArrayFromImage(input_image)
+    print(input_nda.shape)
+
+    spx, spy, spz = input_image.GetSpacing()
+    segmentation = lungmask.apply(input_image, model, force_cpu=False, batch_size=20, volume_postprocessing=False)
+
+    return segmentation, input_nda, spx, spy, spz
+
+def __docker_lungmask_segment(source_dir, model_name):
     payload = {'source_dir': source_dir, 'model_name': model_name}
 
     ready = __wait_until_ready(os.environ['LUNGMASK_HOSTNAME'])
