@@ -17,7 +17,7 @@ def lungmask_segment(source_dir, model_name='R231CovidWeb'):
 
     hostname = os.environ['LUNGMASK_HOSTNAME']
     port = os.environ['LUNGMASK_PORT']
-    service_name = 'please_segment'
+    service_name = 'lungmask_segment'
 
     response = req.get('http://{}:{}/{}'.format(hostname, port, service_name), params=payload)
 
@@ -25,14 +25,25 @@ def lungmask_segment(source_dir, model_name='R231CovidWeb'):
     # array = json.loads(json_resp)
     # np_array = np.asarray(array)
 
-    relative_save_path = response.text
+    print("Got response text", response.text)
+
+    response_dict = json.loads(response.text)
+
+    rel_seg_path       = response_dict["segmentation"]
+    rel_input_nda_path = response_dict["input_nda"]
+    spx, spy, spz      = response_dict["spacing"]
+
     data_share = os.environ["DATA_SHARE_PATH"]
-    save_path = os.path.join(data_share, relative_save_path)
 
-    print("load np array from", save_path)
+    segmentation_path = os.path.join(data_share, rel_seg_path)
+    input_nda_path    = os.path.join(data_share, rel_input_nda_path)
 
-    return np.load(save_path)
+    print("load np array from", segmentation_path)
+    segmentation = np.load(segmentation_path)
+    print("load np array from", input_nda_path)
+    input_nda    = np.load(input_nda_path)
 
+    return segmentation, input_nda, spx, spy, spz
 
 def __wait_until_ready(hostname):
     data_share_path = os.environ['DATA_SHARE_PATH']

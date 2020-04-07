@@ -142,16 +142,17 @@ if __name__ == "__main__":
             # spx, spy, spz = input_image.GetSpacing()
             # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
 
+            # TODO lungmask needs to return
+            # filename of nifty mask
+            # filename of input_nda
+            # spx, spy, spz
 
             # without bar
             filename = os.path.join(download_dir, file)
             print(filename)
-            result = segmenter.lungmask_segment(filename, model_name='R231CovidWeb')
+            segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(filename, model_name='R231CovidWeb')
 
-            print("Result is:")
-            print(result)
-
-            result_out = sitk.GetImageFromArray(result)
+            result_out = sitk.GetImageFromArray(segmentation)
             # result_out.CopyInformation(input_image)
             sitk.WriteImage(result_out, os.path.join(dir_, 'segmentation.nii.gz'))
             bar2.progress(100)

@@ -19,6 +19,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 
 RUN apt-get install curl -y #debugging
+RUN apt-get install vim -y #debugging
 
 COPY main.py /app/main.py
 COPY segmenter.py /app/segmenter.py
