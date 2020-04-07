@@ -120,9 +120,7 @@ if __name__ == "__main__":
 
             shared_dir = os.environ['DATA_SHARE_PATH']
 
-            # TODO this is slightly hardcoded
-            # TODO relies on the fact that both containers have the same path for the shared dir
-            dir_ = os.path.join('{}/tmp/'.format(shared_dir), subject_name)
+            dir_ = os.path.join('/tmp/', subject_name)
             scan.download_dir(dir_, verbose=True)
             download_dir = ''
             for path in Path(dir_).rglob('*.dcm'):
@@ -133,6 +131,8 @@ if __name__ == "__main__":
             st.text('Analysis progress...')
             bar2 = st.progress(0)
 
+            # PREVIOUS BEHAVIOUR:
+
             # model = lungmask.get_model('unet', 'R231CovidWeb')
             # input_image = utils.get_input_image(download_dir)
             # input_nda = sitk.GetArrayFromImage(input_image)
@@ -141,11 +141,6 @@ if __name__ == "__main__":
             #
             # spx, spy, spz = input_image.GetSpacing()
             # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
-
-            # TODO lungmask needs to return
-            # filename of nifty mask
-            # filename of input_nda
-            # spx, spy, spz
 
             # without bar
             filename = os.path.join(download_dir, file)
