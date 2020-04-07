@@ -150,7 +150,8 @@ if __name__ == "__main__":
             # without bar
             filename = os.path.join(download_dir, file)
             print(filename)
-            segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(filename, model_name='R231CovidWeb')
+            segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(download_dir, model_name='R231CovidWeb')
+            zd, yd, xd = input_nda.shape
 
             result_out = sitk.GetImageFromArray(segmentation)
             # result_out.CopyInformation(input_image)
