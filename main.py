@@ -118,7 +118,7 @@ if __name__ == "__main__":
             latest_iteration = st.empty()
             bar = st.progress(0)
 
-            shared_dir = os.environ['DATA_SHARE_PATH']
+            shared_dir = os.environ.get('DATA_SHARE_PATH', '')
 
             dir_ = os.path.join('/tmp/', subject_name)
             scan.download_dir(dir_, verbose=True)
