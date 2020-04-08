@@ -148,6 +148,10 @@ if __name__ == "__main__":
             segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(download_dir, model_name='R231CovidWeb')
             zd, yd, xd = input_nda.shape
 
+            # TODO get muscle segmentation
+            #   segmenter.ct_muscle_segment_dcm("/path/to/dcm/directory")
+            #   segmenter.ct_muscle_segment_nifti("/path/to/nifti/volume.nii.gz")
+
             result_out = sitk.GetImageFromArray(segmentation)
             # result_out.CopyInformation(input_image)
             sitk.WriteImage(result_out, os.path.join(dir_, 'segmentation.nii.gz'))
