@@ -11,16 +11,16 @@ import subprocess as sb
 # TODO add unit tests for segmenter
 
 
-def ct_fat_measure_nifti(source_file):
+def ct_fat_measure_nifti(source_file, filepath_only=False):
     assert __is_nifti(source_file)
-    return __ct_fat_measure(source_file, "ct_visceral_fat_nifti")
+    return __ct_fat_measure(source_file, "ct_visceral_fat_nifti", filepath_only=filepath_only)
 
 
-def ct_fat_measure_dcm(source_file):
-    return __ct_fat_measure(source_file, "ct_visceral_fat_dcm")
+def ct_fat_measure_dcm(source_file, filepath_only=False):
+    return __ct_fat_measure(source_file, "ct_visceral_fat_dcm", filepath_only=filepath_only)
 
 
-def __ct_fat_measure(source_file, request_name):
+def __ct_fat_measure(source_file, request_name, filepath_only):
     payload = {"source_file": source_file}
     worker_hostname = os.environ["CT_FAT_MEASURE_HOSTNAME"]
     worker_port     = os.environ["CT_FAT_MEASURE_PORT"]
@@ -29,6 +29,9 @@ def __ct_fat_measure(source_file, request_name):
 
     report_path = response_dict["fat_report"]
     print("Report path")
+
+    if filepath_only:
+        return report_path
 
     report_csv = __read_csv_file(report_path)
     __delete_file(report_path)
