@@ -7,19 +7,19 @@ import SimpleITK as sitk
 
 
 # for nifti files source is of type: /path/to/file.nii.gz
-def ct_muscle_segment_nifti(source_file):
+def ct_muscle_segment_nifti(source_file, filepath_only=False):
 
     assert os.environ.get("ENVIRONMENT", "").upper() != "DOCKERCOMPOSE"
 
-    return __ct_muscle_segment_nifti(source_file)
+    return __ct_muscle_segment_nifti(source_file, filepath_only=filepath_only)
 
 
 # for dcm files source is of type: /path/to/directory
-def ct_muscle_segment_dcm(source_directory):
+def ct_muscle_segment_dcm(source_directory, filepath_only=False):
     assert os.environ.get("ENVIRONMENT", "").upper() != "DOCKERCOMPOSE"
 
     nifti_filename = __converter_convert_dcm_to_nifti(source_directory)
-    return __ct_muscle_segment_nifti(nifti_filename)
+    return __ct_muscle_segment_nifti(nifti_filename, filepath_only=filepath_only)
 
 
 def __converter_convert_dcm_to_nifti(source_directory):
@@ -46,7 +46,8 @@ def __converter_convert_dcm_to_nifti(source_directory):
 
     return nifti_filename
 
-def __ct_muscle_segment_nifti(source_file):
+
+def __ct_muscle_segment_nifti(source_file, filepath_only=False):
     assert __is_nifti(source_file)
 
     payload = {'source_file': source_file}
@@ -71,6 +72,10 @@ def __ct_muscle_segment_nifti(source_file):
     segmentation_path = os.path.join(data_share, rel_seg_path)
 
     print("reading muscle segmentation from", segmentation_path)
+
+    if filepath_only:
+        return segmentation_path
+
     segmentation = __read_nifti_image(segmentation_path)
 
     return segmentation

@@ -27,3 +27,4 @@ COPY plotter/__init__.py /app/plotter/__init__.py
 COPY plotter/generateHUplots.py /app/plotter/generateHUplots.py
 COPY lung.png /app/lung.png
 COPY seg.png /app/seg.png
+COPY develop.py /app/develop.py
