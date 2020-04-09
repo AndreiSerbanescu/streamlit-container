@@ -4,7 +4,74 @@ from time import time, sleep
 import numpy as np
 import json
 import SimpleITK as sitk
+import csv
 
+# TODO refactor code duplication
+# TODO add unit tests for segmenter
+
+
+def ct_fat_measure_nifti(source_file):
+    assert __is_nifti(source_file)
+    return __ct_fat_measure(source_file, "")
+
+
+def ct_fat_measure_dcm(source_file):
+    return __ct_fat_measure(source_file, "ct_visceral_fat_nifti")
+
+
+def __ct_fat_measure(source_file, request_name):
+    payload = {"source_file": source_file}
+    worker_hostname = os.environ["CT_FAT_MEASURE_HOSTNAME"]
+    worker_port     = os.environ["CT_FAT_MEASURE_PORT"]
+
+    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
+
+    report_path = response_dict["fat_report"]
+    print("Report path")
+
+    report_csv = __read_csv_file(report_path)
+    __delete_file(report_path)
+
+    return report_csv
+
+
+def __read_csv_file(filepath):
+
+    with open(filepath) as csv_file:
+
+        lines = csv_file.readlines()
+        # remove all whitespaces
+        lines = [line.replace(' ', '') for line in lines]
+
+        csv_dict = csv.DictReader(lines)
+        dict_rows = []
+        for row in csv_dict:
+            dict_rows.append(row)
+
+        return dict_rows
+
+# TODO error handling?
+def __delete_file(filepath):
+
+    rm_cmd = "rm -rf {}".format(filepath)
+    print("Removing {}".format(filepath))
+    sb.call([rm_cmd], shell=True)
+
+
+def __send_request_to_worker(payload, worker_hostname, worker_port, request_name):
+
+    ready = __wait_until_ready(worker_hostname)
+
+    if not ready:
+        print("{} not ready".format(worker_hostname), flush=True)
+        raise Exception("{} not ready".format(worker_hostname))
+
+    response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
+
+    print("Got response text", response.text)
+    response_dict = json.loads(response.text)
+
+    return response_dict
 
 # for nifti files source is of type: /path/to/file.nii.gz
 def ct_muscle_segment_nifti(source_file, filepath_only=False):
