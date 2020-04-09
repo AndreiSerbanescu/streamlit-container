@@ -14,7 +14,7 @@ def segment_positives():
         seg_filename = ct_muscle_segment_dcm(filename, filepath_only=True)
         seg_root, seg_name = os.path.split(seg_filename)
 
-        mv_cmd = "mv {} /app/source/output/{}".format(seg_filename, case_dir + seg_name)
+        mv_cmd = "mv {} /app/source/output/{}".format(seg_filename, case_dir + "muscle_seg.nii.gz")
         sb.call([mv_cmd], shell=True)
 
 if __name__ == "__main__":

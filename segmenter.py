@@ -1,6 +1,6 @@
 import os
 import requests as req
-from time import time
+from time import time, sleep
 import numpy as np
 import json
 import SimpleITK as sitk
