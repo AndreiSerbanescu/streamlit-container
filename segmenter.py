@@ -5,6 +5,7 @@ import numpy as np
 import json
 import SimpleITK as sitk
 import csv
+import subprocess as sb
 
 # TODO refactor code duplication
 # TODO add unit tests for segmenter
@@ -12,11 +13,11 @@ import csv
 
 def ct_fat_measure_nifti(source_file):
     assert __is_nifti(source_file)
-    return __ct_fat_measure(source_file, "")
+    return __ct_fat_measure(source_file, "ct_visceral_fat_nifti")
 
 
 def ct_fat_measure_dcm(source_file):
-    return __ct_fat_measure(source_file, "ct_visceral_fat_nifti")
+    return __ct_fat_measure(source_file, "ct_visceral_fat_dcm")
 
 
 def __ct_fat_measure(source_file, request_name):
