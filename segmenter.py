@@ -22,22 +22,14 @@ def ct_muscle_segment_dcm(source_directory, filepath_only=False):
     return __ct_muscle_segment_nifti(nifti_filename, filepath_only=filepath_only)
 
 
+
 def __converter_convert_dcm_to_nifti(source_directory):
-    payload = {'source_dir': source_directory}
-    ready = __wait_until_ready(os.environ['LUNGMASK_CONVERTER_HOSTNAME'])
+    payload         = {'source_dir': source_directory}
+    worker_hostname = os.environ["LUNGMASK_CONVERTER_HOSTNAME"]
+    worker_port     = os.environ["LUNGMASK_CONVERTER_PORT"]
+    request_name    = 'lungmask_convert_dcm_to_nifti'
 
-    if not ready:
-        print("Lungmask converter not ready", flush=True)
-        raise Exception("Lungmask converter not ready")
-
-    hostname = os.environ['LUNGMASK_CONVERTER_HOSTNAME']
-    port = os.environ['LUNGMASK_CONVERTER_PORT']
-    request_name = 'lungmask_convert_dcm_to_nifti'
-
-    response = req.get('http://{}:{}/{}'.format(hostname, port, request_name), params=payload)
-
-    print("Got response text", response.text)
-    response_dict = json.loads(response.text)
+    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     rel_fn_path = response_dict["filename"]
     data_share = os.environ["DATA_SHARE_PATH"]
@@ -50,21 +42,11 @@ def __converter_convert_dcm_to_nifti(source_directory):
 def __ct_muscle_segment_nifti(source_file, filepath_only=False):
     assert __is_nifti(source_file)
 
-    payload = {'source_file': source_file}
-    ready = __wait_until_ready(os.environ['CT_MUSCLE_SEG_HOSTNAME'])
+    payload         = {'source_file': source_file}
+    worker_hostname = os.environ["CT_MUSCLE_SEG_HOSTNAME"]
+    worker_port     = os.environ["CT_MUSCLE_SEG_PORT"]
 
-    if not ready:
-        print("CT Muscle Segment not ready", flush=True)
-        raise Exception("CT Muscle Segment not ready")
-
-    hostname = os.environ['CT_MUSCLE_SEG_HOSTNAME']
-    port = os.environ['CT_MUSCLE_SEG_PORT']
-    request_name = 'ct_segment_muscle'
-
-    response = req.get('http://{}:{}/{}'.format(hostname, port, request_name), params=payload)
-
-    print("Got response text", response.text)
-    response_dict = json.loads(response.text)
+    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     rel_seg_path = response_dict["segmentation"]
     data_share = os.environ["DATA_SHARE_PATH"]
@@ -125,24 +107,13 @@ def __host_lungmask_segment(source_dir, model_name):
     return segmentation, input_nda, spx, spy, spz
 
 def __docker_lungmask_segment(source_dir, model_name):
-    payload = {'source_dir': source_dir, 'model_name': model_name}
 
-    ready = __wait_until_ready(os.environ['LUNGMASK_HOSTNAME'])
+    payload         = {'source_dir': source_dir, 'model_name': model_name}
+    worker_hostname = os.environ['LUNGMASK_HOSTNAME']
+    worker_port     = os.environ['LUNGMASK_PORT']
+    request_name    = 'lungmask_segment'
 
-    if not ready:
-        # log_critical("Lungmask not ready")
-        print("Lungmask not ready", flush=True)
-        raise Exception("Lungmask not ready")
-
-    hostname = os.environ['LUNGMASK_HOSTNAME']
-    port = os.environ['LUNGMASK_PORT']
-    request_name = 'lungmask_segment'
-
-    response = req.get('http://{}:{}/{}'.format(hostname, port, request_name), params=payload)
-
-    print("Got response text", response.text)
-
-    response_dict = json.loads(response.text)
+    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     rel_seg_path       = response_dict["segmentation"]
     rel_input_nda_path = response_dict["input_nda"]
@@ -161,6 +132,21 @@ def __docker_lungmask_segment(source_dir, model_name):
     input_nda    = np.load(input_nda_path)
 
     return segmentation, input_nda, spx, spy, spz
+
+def __send_request_to_worker(payload, worker_hostname, worker_port, request_name):
+
+    ready = __wait_until_ready(worker_hostname)
+
+    if not ready:
+        print("{} not ready".format(worker_hostname), flush=True)
+        raise Exception("{} not ready".format(worker_hostname))
+
+    response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
+
+    print("Got response text", response.text)
+    response_dict = json.loads(response.text)
+
+    return response_dict
 
 def __wait_until_ready(hostname):
     data_share_path = os.environ['DATA_SHARE_PATH']
