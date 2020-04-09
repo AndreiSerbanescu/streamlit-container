@@ -5,7 +5,7 @@ import subprocess as sb
 def segment_positives():
     directory = "/app/source/ct_lung_volumes/Positive/"
 
-    for i in range(1, 10):
+    for i in range(1, 11):
         str_i = "0" + str(i) if i < 10 else str(i)
         case_dir = "Case_0" + str_i
 
@@ -17,5 +17,21 @@ def segment_positives():
         mv_cmd = "mv {} /app/source/output/{}".format(seg_filename, case_dir + "muscle_seg.nii.gz")
         sb.call([mv_cmd], shell=True)
 
+def segment_negatives():
+
+
+    directory = "/app/source/ct_lung_volumes/Negative2"
+    dirs = ["BE001", "BE002", "BE006", "BE007", "BE010", "LC001", "LC002", "LC003", "LC008", "LC009"]
+
+    for case_dir in dirs:
+
+        filename = os.path.join(directory, case_dir)
+        print(filename)
+        seg_filename = ct_muscle_segment_dcm(filename, filepath_only=True)
+
+        mv_cmd = "mv {} /app/source/output/{}".format(seg_filename, case_dir + "_muscle_seg.nii.gz")
+        sb.call([mv_cmd], shell=True)
+
 if __name__ == "__main__":
-    segment_positives()
+    #segment_positives()
+    segment_negatives()
