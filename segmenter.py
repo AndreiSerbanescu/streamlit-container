@@ -12,11 +12,15 @@ import subprocess as sb
 
 
 def ct_fat_measure_nifti(source_file, filepath_only=False):
+    assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
+
     assert __is_nifti(source_file)
     return __ct_fat_measure(source_file, "ct_visceral_fat_nifti", filepath_only=filepath_only)
 
 
 def ct_fat_measure_dcm(source_file, filepath_only=False):
+    assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
+
     return __ct_fat_measure(source_file, "ct_visceral_fat_dcm", filepath_only=filepath_only)
 
 
@@ -80,14 +84,14 @@ def __send_request_to_worker(payload, worker_hostname, worker_port, request_name
 # for nifti files source is of type: /path/to/file.nii.gz
 def ct_muscle_segment_nifti(source_file, filepath_only=False):
 
-    assert os.environ.get("ENVIRONMENT", "").upper() != "DOCKERCOMPOSE"
+    assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
 
     return __ct_muscle_segment_nifti(source_file, filepath_only=filepath_only)
 
 
 # for dcm files source is of type: /path/to/directory
 def ct_muscle_segment_dcm(source_directory, filepath_only=False):
-    assert os.environ.get("ENVIRONMENT", "").upper() != "DOCKERCOMPOSE"
+    assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
 
     nifti_filename = __converter_convert_dcm_to_nifti(source_directory)
     return __ct_muscle_segment_nifti(nifti_filename, filepath_only=filepath_only)
@@ -116,6 +120,7 @@ def __ct_muscle_segment_nifti(source_file, filepath_only=False):
     payload         = {'source_file': source_file}
     worker_hostname = os.environ["CT_MUSCLE_SEG_HOSTNAME"]
     worker_port     = os.environ["CT_MUSCLE_SEG_PORT"]
+    request_name    = "ct_segment_muscle"
 
     response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 

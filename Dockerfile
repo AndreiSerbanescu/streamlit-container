@@ -28,3 +28,5 @@ COPY plotter/generateHUplots.py /app/plotter/generateHUplots.py
 COPY lung.png /app/lung.png
 COPY seg.png /app/seg.png
 COPY develop.py /app/develop.py
+RUN mkdir /app/common
+COPY common/* /app/common/
