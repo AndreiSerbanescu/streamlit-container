@@ -10,6 +10,7 @@ import subprocess as sb
 # TODO refactor code duplication
 # TODO add unit tests for segmenter
 
+# ALL PATHS INPUTTED ARE RELATIVE TO $DATA_SHARE_PATH
 
 def ct_fat_measure_nifti(source_file, filepath_only=False):
     assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
@@ -29,7 +30,8 @@ def __ct_fat_measure(source_file, request_name, filepath_only):
     worker_hostname = os.environ["CT_FAT_MEASURE_HOSTNAME"]
     worker_port     = os.environ["CT_FAT_MEASURE_PORT"]
 
-    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
+    cr = ContainerRequester()
+    response_dict = cr.send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     report_path = response_dict["fat_report"]
     print("Report path")
@@ -66,21 +68,6 @@ def __delete_file(filepath):
     sb.call([rm_cmd], shell=True)
 
 
-def __send_request_to_worker(payload, worker_hostname, worker_port, request_name):
-
-    ready = __wait_until_ready(worker_hostname)
-
-    if not ready:
-        print("{} not ready".format(worker_hostname), flush=True)
-        raise Exception("{} not ready".format(worker_hostname))
-
-    response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
-
-    print("Got response text", response.text)
-    response_dict = json.loads(response.text)
-
-    return response_dict
-
 # for nifti files source is of type: /path/to/file.nii.gz
 def ct_muscle_segment_nifti(source_file, filepath_only=False):
 
@@ -99,19 +86,19 @@ def ct_muscle_segment_dcm(source_directory, filepath_only=False):
 
 
 def __converter_convert_dcm_to_nifti(source_directory):
+
     payload         = {'source_dir': source_directory}
     worker_hostname = os.environ["LUNGMASK_CONVERTER_HOSTNAME"]
     worker_port     = os.environ["LUNGMASK_CONVERTER_PORT"]
     request_name    = 'lungmask_convert_dcm_to_nifti'
 
-    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
+    cr = ContainerRequester()
+    response_dict = cr.send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
-    rel_fn_path = response_dict["filename"]
-    data_share = os.environ["DATA_SHARE_PATH"]
+    relative_nifti_filename = response_dict["filename"]
+    data_share              = os.environ["DATA_SHARE_PATH"]
 
-    nifti_filename = os.path.join(data_share, rel_fn_path)
-
-    return nifti_filename
+    return relative_nifti_filename
 
 
 def __ct_muscle_segment_nifti(source_file, filepath_only=False):
@@ -122,18 +109,20 @@ def __ct_muscle_segment_nifti(source_file, filepath_only=False):
     worker_port     = os.environ["CT_MUSCLE_SEG_PORT"]
     request_name    = "ct_segment_muscle"
 
-    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
+    print("filepath only ", filepath_only)
+
+    cr = ContainerRequester()
+    response_dict = cr.send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     rel_seg_path = response_dict["segmentation"]
     data_share = os.environ["DATA_SHARE_PATH"]
 
     segmentation_path = os.path.join(data_share, rel_seg_path)
 
-    print("reading muscle segmentation from", segmentation_path)
-
     if filepath_only:
         return segmentation_path
 
+    print("reading muscle segmentation from", segmentation_path)
     segmentation = __read_nifti_image(segmentation_path)
 
     return segmentation
@@ -159,10 +148,10 @@ def __is_nifti(filepath):
 
     return nii == "nii" and gz == "gz"
 
-def lungmask_segment(source_dir, model_name='R231CovidWeb'):
+def lungmask_segment(source_dir, model_name='R231CovidWeb', filepath_only=False):
 
     if os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE":
-        return __docker_lungmask_segment(source_dir, model_name=model_name)
+        return __docker_lungmask_segment(source_dir, model_name=model_name, filepath_only=filepath_only)
 
     return __host_lungmask_segment(source_dir, model_name=model_name)
 
@@ -182,14 +171,15 @@ def __host_lungmask_segment(source_dir, model_name):
 
     return segmentation, input_nda, spx, spy, spz
 
-def __docker_lungmask_segment(source_dir, model_name):
+def __docker_lungmask_segment(source_dir, model_name, filepath_only):
 
     payload         = {'source_dir': source_dir, 'model_name': model_name}
     worker_hostname = os.environ['LUNGMASK_HOSTNAME']
     worker_port     = os.environ['LUNGMASK_PORT']
     request_name    = 'lungmask_segment'
 
-    response_dict = __send_request_to_worker(payload, worker_hostname, worker_port, request_name)
+    cr = ContainerRequester()
+    response_dict = cr.send_request_to_worker(payload, worker_hostname, worker_port, request_name)
 
     rel_seg_path       = response_dict["segmentation"]
     rel_input_nda_path = response_dict["input_nda"]
@@ -202,6 +192,9 @@ def __docker_lungmask_segment(source_dir, model_name):
     segmentation_path = os.path.join(data_share, rel_seg_path)
     input_nda_path    = os.path.join(data_share, rel_input_nda_path)
 
+    if filepath_only:
+        return segmentation_path, input_nda_path, spx, spy, spz
+
     print("load np array from", segmentation_path)
     segmentation = np.load(segmentation_path)
     print("load np array from", input_nda_path)
@@ -209,42 +202,45 @@ def __docker_lungmask_segment(source_dir, model_name):
 
     return segmentation, input_nda, spx, spy, spz
 
-def __send_request_to_worker(payload, worker_hostname, worker_port, request_name):
 
-    ready = __wait_until_ready(worker_hostname)
+class ContainerRequester:
 
-    if not ready:
-        print("{} not ready".format(worker_hostname), flush=True)
-        raise Exception("{} not ready".format(worker_hostname))
+    def send_request_to_worker(self, payload, worker_hostname, worker_port, request_name):
 
-    response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
+        ready = self.wait_until_ready(worker_hostname)
 
-    print("Got response text", response.text)
-    response_dict = json.loads(response.text)
+        if not ready:
+            print("{} not ready".format(worker_hostname), flush=True)
+            raise Exception("{} not ready".format(worker_hostname))
 
-    return response_dict
+        response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
 
-def __wait_until_ready(hostname):
-    data_share_path = os.environ['DATA_SHARE_PATH']
+        print("Got response text", response.text)
+        response_dict = json.loads(response.text)
 
-    backoff_time = 0.5
-    wait_time = 10
+        return response_dict
 
-    curr_time = time()
-    finish_time = curr_time + wait_time
+    def wait_until_ready(self, hostname):
+        data_share_path = os.environ['DATA_SHARE_PATH']
 
-    while curr_time < finish_time:
+        backoff_time = 0.5
+        wait_time = 10
 
-        print("Waiting for {} to start".format(hostname))
-        #log_info("Waiting for {} to start".format(hostname))
-
-        if os.path.exists("{}/{}_ready.txt".format(data_share_path, hostname)):
-            #component ready
-            return True
-
-        sleep(10 * backoff_time)
         curr_time = time()
+        finish_time = curr_time + wait_time
 
-    print("Component not ready")
-    #log_info("Component not ready")
-    return False
+        while curr_time < finish_time:
+
+            print("Waiting for {} to start".format(hostname))
+            # log_info("Waiting for {} to start".format(hostname))
+
+            if os.path.exists("{}/{}_ready.txt".format(data_share_path, hostname)):
+                # component ready
+                return True
+
+            sleep(10 * backoff_time)
+            curr_time = time()
+
+        print("Component not ready")
+        # log_info("Component not ready")
+        return False

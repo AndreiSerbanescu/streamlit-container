@@ -21,6 +21,9 @@ RUN apt-get install -y locales && locale-gen en_US.UTF-8
 RUN apt-get install curl -y #debugging
 RUN apt-get install vim -y #debugging
 
+RUN pip3 install pytest
+RUN pip3 install mock
+
 COPY main.py /app/main.py
 COPY segmenter.py /app/segmenter.py
 COPY plotter/__init__.py /app/plotter/__init__.py
@@ -31,4 +34,4 @@ COPY develop.py /app/develop.py
 RUN mkdir /app/common
 COPY common/* /app/common/
 
-COPY test.py /app/test.py
+COPY /test/ /app/test/
