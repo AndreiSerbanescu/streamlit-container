@@ -22,7 +22,8 @@ def ct_fat_measure_nifti(source_file, filepath_only=False):
 def ct_fat_measure_dcm(source_file, filepath_only=False):
     assert os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE"
 
-    return __ct_fat_measure(source_file, "ct_visceral_fat_dcm", filepath_only=filepath_only)
+    nifti_filename = __converter_convert_dcm_to_nifti(source_file)
+    return __ct_fat_measure(nifti_filename, "ct_visceral_fat_nifti", filepath_only=filepath_only)
 
 
 def __ct_fat_measure(source_file, request_name, filepath_only):
