@@ -70,7 +70,8 @@ def test_ct_visceral_fat_nifti_calls_container_requester_send_to_worker_once(moc
     mock_send_req.assert_called_once_with(payload, hostname, port, request_name)
 
 @mock.patch.object(ContainerRequester, 'send_request_to_worker')
-def test_ct_visceral_fat_dcm_calls_container_requester_send_to_worker_once(mock_send_req):
+def test_ct_visceral_fat_dcm_calls_container_requester_send_to_worker_twice(mock_send_req):
+
 
     mock_source_file = "/mock/dir"
 
@@ -79,11 +80,16 @@ def test_ct_visceral_fat_dcm_calls_container_requester_send_to_worker_once(mock_
     request_name = 'ct_visceral_fat_dcm'
     payload      = {'source_file': mock_source_file}
 
-    mock_send_req.return_value = {"fat_report": "hello"}
+    mock_send_req.return_value = {
+        "fat_report": "hello",
+        "filename": "test-filename.nii.gz"
+
+    }
 
     ct_fat_measure_dcm(mock_source_file, filepath_only=True)
 
-    mock_send_req.assert_called_once_with(payload, hostname, port, request_name)
+    # once for converter and once for ct fat measurer
+    assert mock_send_req.call_count == 2
 
 
 @mock.patch.object(ContainerRequester, 'send_request_to_worker')
