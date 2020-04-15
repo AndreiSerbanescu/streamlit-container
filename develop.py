@@ -75,5 +75,31 @@ def get_fat_measurements_negative():
     for thread in threads:
         thread.join()
 
+def get_ct_fat_measure_splitted_volume():
+
+    base_dir = "/app/source/Case002_split/"
+    sub_dirs = ["Case_002_1", "Case_002_2", "Case_002_3"]
+
+    threads = []
+
+    for sub_dir in sub_dirs:
+
+        filepath = os.path.join(base_dir, sub_dir)
+        thread = Thread(target=lambda: ct_fat_measure_dcm(filepath, filepath_only=True))
+        threads.append(thread)
+        thread.start()
+
+        for thread in threads:
+            thread.join()
+
+def get_ct_fat_measure_volume():
+
+    directory = "/app/source/Case002_split/Case_002"
+
+    filepath = ct_fat_measure_dcm(directory, filepath_only=True)
+
+    print(filepath)
+
+
 if __name__ == "__main__":
-    get_fat_measurements_positive()
+    get_ct_fat_measure_splitted_volume()
