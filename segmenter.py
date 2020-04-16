@@ -1,12 +1,24 @@
 from workers.ct_fat_measure import CTFatMeasurer
 from workers.ct_muscle_segment import CTMuscleSegmenter
 from workers.lungmask_segment import LungmaskSegmenter
+from workers.covid_detector import CovidDetector
 from container_requester import ContainerRequester
 
 # ALL PATHS INPUTTED ARE RELATIVE TO $DATA_SHARE_PATH
 
+def covid_detector_nifti(source_file, filepath_only=False):
 
-# TODO split into different files
+    cr = ContainerRequester()
+    covid_detector = CovidDetector(cr)
+
+    return covid_detector.generate_detection_and_attention_maps(source_file, filepath_only=filepath_only)
+
+def covid_detector_dcm(source_file, filepath_only=False):
+
+    cr = ContainerRequester()
+    covid_detector = CovidDetector(cr)
+
+    return covid_detector.generate_detection_and_attention_maps(source_file, filepath_only=filepath_only)
 
 def ct_fat_measure_nifti(source_file, filepath_only=False):
 
