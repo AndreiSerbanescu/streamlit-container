@@ -1,7 +1,7 @@
 import os
 from workers.converter import Converter
 
-class CovidDetector:
+class CovidDetectorSeg:
 
     def __init__(self, container_requester):
         self.container_requester = container_requester
