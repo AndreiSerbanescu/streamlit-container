@@ -16,6 +16,10 @@ class ContainerRequester:
 
         response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
 
+        if response.status_code != 200:
+            print("Got nonsuccessful response code")
+            return {}
+
         print("Got response text", response.text)
         response_dict = json.loads(response.text)
 
