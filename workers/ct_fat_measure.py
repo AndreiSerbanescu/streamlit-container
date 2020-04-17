@@ -35,7 +35,10 @@ class CTFatMeasurer:
                                                                         self.worker_port,
                                                                         request_name)
 
-        report_path = response_dict["fat_report"]
+        relative_report_path = response_dict["fat_report"]
+        data_share = os.environ["DATA_SHARE_PATH"]
+        report_path = os.path.join(data_share, relative_report_path)
+
         print("Report path")
 
         if filepath_only:
