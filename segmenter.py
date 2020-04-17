@@ -11,14 +11,14 @@ def covid_detector_nifti(source_file, filepath_only=False):
     cr = ContainerRequester()
     covid_detector = CovidDetector(cr)
 
-    return covid_detector.generate_detection_and_attention_maps(source_file, filepath_only=filepath_only)
+    return covid_detector.generate_detection_and_attention_maps_nifti(source_file, filepath_only=filepath_only)
 
 def covid_detector_dcm(source_file, filepath_only=False):
 
     cr = ContainerRequester()
     covid_detector = CovidDetector(cr)
 
-    return covid_detector.generate_detection_and_attention_maps(source_file, filepath_only=filepath_only)
+    return covid_detector.generate_detection_and_attention_maps_dcm(source_file, filepath_only=filepath_only)
 
 def ct_fat_measure_nifti(source_file, filepath_only=False):
 
