@@ -36,6 +36,7 @@ class CommandRequestHandler(BaseHTTPRequestHandler):
 
         if parsed_url.path not in self.__requested_method:
             log_debug("unkown request {} received".format(self.path))
+            self.send_answer(success=False, message="Unkown request {} received".format(self.path))
             return
 
 
@@ -45,16 +46,21 @@ class CommandRequestHandler(BaseHTTPRequestHandler):
             result_dict, success = self.__requested_method[parsed_url.path](parsed_params)
 
             if not success:
+                log_debug("Worker not successful")
                 self.send_answer(success=False, message="Worker could not finish computation")
+                return
 
             log_debug("result", result_dict)
 
             log_debug("sending over", result_dict)
 
             self.send_answer(success=True, message=json.dumps(result_dict))
+            return
 
         except Exception as e:
+            log_debug("Caught exceptiton", e)
             self.send_answer(success=False, message="Error encountered {}".format(str(e)))
+            return
 
 
 
