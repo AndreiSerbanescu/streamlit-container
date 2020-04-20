@@ -15,28 +15,10 @@ class LungmaskSegmenter:
     def segment(self, source_dir, model_name='R231CovidWeb', filepath_only=False):
 
         if os.environ.get("ENVIRONMENT", "").upper() == "DOCKERCOMPOSE":
-
-            new_source_dir = self.__move_files_to_shared_directory(source_dir)
-            return self.__docker_segment(new_source_dir, model_name=model_name, filepath_only=filepath_only)
+            return self.__docker_segment(source_dir, model_name=model_name, filepath_only=filepath_only)
 
         return self.__host_segment(source_dir, model_name=model_name)
 
-    def __move_files_to_shared_directory(self, source_dir):
-
-        data_share = os.environ["DATA_SHARE_PATH"]
-        input = "streamlit_input"
-        abs_input_path = os.path.join(data_share, input)
-
-        if not os.path.exists(abs_input_path):
-            os.mkdir(abs_input_path)
-
-        cp_cmd = "cp -r {} {}".format(source_dir, abs_input_path)
-        exit_code = sb.call([cp_cmd], shell=True)
-
-        if exit_code == 1:
-            raise Exception("Couldn't move input files from {} to {}".format(source_dir, abs_input_path))
-
-        return input
 
     def __host_segment(self, source_dir, model_name):
 

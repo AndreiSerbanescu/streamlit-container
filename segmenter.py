@@ -4,6 +4,7 @@ from workers.lungmask_segment import LungmaskSegmenter
 from workers.covid_detector import CovidDetector
 from workers.covid_detector_seg import CovidDetectorSeg
 from container_requester import ContainerRequester
+import os
 
 # ALL PATHS INPUTTED ARE RELATIVE TO $DATA_SHARE_PATH
 
@@ -80,15 +81,15 @@ def lungmask_segment(source_dir, model_name='R231CovidWeb', filepath_only=False)
 
 
 
-# def __is_nifti(filepath):
-#
-#     _, file = os.path.split(filepath)
-#
-#     file_exts = file.split('.')
-#     if len(file_exts) < 3:
-#         return False
-#
-#     nii = file_exts[len(file_exts) - 2]
-#     gz  = file_exts[-1]
-#
-#     return nii == "nii" and gz == "gz"
+def is_nifti(filepath):
+
+    file = os.path.split(filepath)[1]
+
+    file_exts = file.split('.')
+    if len(file_exts) < 3:
+        return False
+
+    nii = file_exts[len(file_exts) - 2]
+    gz  = file_exts[-1]
+
+    return nii == "nii" and gz == "gz"

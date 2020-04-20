@@ -1,6 +1,7 @@
 from workers.converter import Converter
 import os
 import SimpleITK as sitk
+import workers.nifti_reader as nifti_reader
 
 class CTMuscleSegmenter:
 
@@ -45,14 +46,6 @@ class CTMuscleSegmenter:
             return segmentation_path
 
         print("reading muscle segmentation from", segmentation_path)
-        segmentation = self.__read_nifti_image(segmentation_path)
+        segmentation = nifti_reader.read_nifti_image(segmentation_path)
 
         return segmentation
-
-    def __read_nifti_image(self, path):
-        reader = sitk.ImageFileReader()
-        reader.SetImageIO("NiftiImageIO")
-        reader.SetFileName(path)
-        image = reader.Execute()
-
-        return image

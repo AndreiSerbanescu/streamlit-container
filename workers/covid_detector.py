@@ -1,5 +1,6 @@
 import os
 from workers.converter import Converter
+import workers.nifti_reader as nifti_reader
 
 class CovidDetector:
 
@@ -31,11 +32,19 @@ class CovidDetector:
                                                                         self.worker_port,
                                                                         self.request_name)
 
-        if filepath_only:
-            return "" # TODO return filenames
 
-        return "" # TODO return actual images
-        # report_path = response_dict["fat_report"]
-        # print("Report path")
-        #
-        # return report_csv
+        rel_attention_volume_path = response_dict["auxiliary_volume"]
+        rel_detection_volume_path = response_dict["detection_volume"]
+
+        data_share = os.environ["DATA_SHARE_PATH"]
+
+        attention_volume_path = os.path.join(data_share, rel_attention_volume_path)
+        detection_volume_path = os.path.join(data_share, rel_detection_volume_path)
+
+        if filepath_only:
+            return attention_volume_path, detection_volume_path
+
+        attention_volume = nifti_reader.read_nifti_image(attention_volume_path)
+        detection_volume = nifti_reader.read_nifti_image(detection_volume_path)
+
+        return attention_volume, detection_volume
