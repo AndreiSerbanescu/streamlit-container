@@ -41,11 +41,13 @@ class CTMuscleSegmenter:
         data_share = os.environ["DATA_SHARE_PATH"]
 
         segmentation_path = os.path.join(data_share, rel_seg_path)
+        abs_source_file   = os.path.join(data_share, source_file)
 
         if filepath_only:
-            return segmentation_path
+            return segmentation_path, abs_source_file
 
         print("reading muscle segmentation from", segmentation_path)
         segmentation = nifti_reader.read_nifti_image(segmentation_path)
+        original     = nifti_reader.read_nifti_image(abs_source_file)
 
-        return segmentation
+        return segmentation, original
