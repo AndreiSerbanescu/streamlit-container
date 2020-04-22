@@ -1,8 +1,12 @@
 import os
+from container_requester import ContainerRequester
 
 class Converter:
 
-    def __init__(self, container_requester):
+    def __init__(self, container_requester=None):
+
+        if container_requester is None:
+            container_requester = ContainerRequester()
 
         self.worker_hostname = os.environ["LUNGMASK_CONVERTER_HOSTNAME"]
         self.worker_port = os.environ["LUNGMASK_CONVERTER_PORT"]
