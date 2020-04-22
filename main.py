@@ -79,7 +79,14 @@ def ct_fat_report(source_file):
     data_load_state.text('Loading data...done!')
 
     # TODO better display
-    st.text(fat_report_csv[:3])
+    display_fat_report(fat_report_csv)
+
+def display_fat_report(fat_report):
+    # as of right now displaying information about lower half
+    half_report = fat_report[len(fat_report) / 2:]
+
+    
+
 
 def ct_muscle_segment(source_file):
     print("ct muscle segment called with", source_file)
@@ -99,14 +106,9 @@ def display_ct_muscle_segment_volume(original, segmentation):
 
     segmentation_array = sitk.GetArrayFromImage(segmentation)
     original_array     = sitk.GetArrayFromImage(original)
-    print(segmentation_array[0])
-
-    # output_nda = sitk.GetArrayFromImage(result_out)
-    # st.header("HU distribution:")
-    # generateHUplots.generateHUPlots(input_nda, output_nda, 2)
-    #
 
     spx, spy, spz = original.GetSpacing()
+
     muscle = np.count_nonzero(segmentation_array == 1) * spx * spy * spz
 
     st.header("Result:")
@@ -114,10 +116,15 @@ def display_ct_muscle_segment_volume(original, segmentation):
     #
     st.markdown('**Muscle Segmentation** by TODO paper here')
 
+    display_volume_and_mask(original_array, segmentation_array)
+
+
+def display_volume_and_mask(original_array, segmentation_array):
     num_labels = segmentation_array.max()
     imgs = []
     cm = plt.get_cmap('gray')
     cm_hot = plt.get_cmap('inferno')  # copper
+    zd, yd, xd = original_array.shape
     for i in range(zd):
         mskmax = original_array[segmentation_array > 0].max()
         mskmin = original_array[segmentation_array > 0].min()
@@ -128,10 +135,7 @@ def display_ct_muscle_segment_volume(original, segmentation):
         im = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
         im = Image.fromarray(im).convert('RGB')
         imgs.append(im.resize((150, 150)))
-
     st.image(imgs)
-
-
 
 
 def lesion_detect(source_file):
@@ -188,22 +192,7 @@ def lungmask_segment(source_dir):
                     is a data diversity problem, not a methodology problem". 1 2020, \
                     [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
-    num_labels = output_nda.max()
-    imgs = []
-    cm = plt.get_cmap('gray')
-    cm_hot = plt.get_cmap('inferno')  # copper
-    for i in range(zd):
-        mskmax = input_nda[output_nda > 0].max()
-        mskmin = input_nda[output_nda > 0].min()
-        im = (input_nda[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
-        im = np.uint8(cm(im) * 255)
-        im = Image.fromarray(im).convert('RGB')
-        imgs.append(im.resize((150, 150)))
-        im = np.uint8(cm_hot(output_nda[i, :, :].astype(float) / num_labels) * 255)
-        im = Image.fromarray(im).convert('RGB')
-        imgs.append(im.resize((150, 150)))
-
-    st.image(imgs)
+    display_volume_and_mask(input_nda, output_nda)
 
 def move_files_to_shared_directory(source_dir):
 
@@ -347,6 +336,13 @@ if __name__ == "__main__":
 
             for thread in threads:
                 thread.join()
+
+
+            # TODO development delete this
+            from workers.nifti_reader import read_nifti_image
+            original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
+            muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
+            display_ct_muscle_segment_volume(original, muscle_segmentation)
 
     ##### XNAT connection #####
 
