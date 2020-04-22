@@ -79,14 +79,77 @@ def ct_fat_report(source_file):
     data_load_state.text('Loading data...done!')
 
     # TODO better display
-    display_fat_report(fat_report_csv)
+    # display_fat_report(fat_report_csv)
 
-def display_fat_report(fat_report):
+def display_fat_report(volume, fat_report):
+
+    st.markdown('**Fat Report - considering lower half**')
+
+    last_row = fat_report[-1]
+    # remove last row
+    fat_report = fat_report[:len(fat_report) - 1]
     # as of right now displaying information about lower half
-    half_report = fat_report[len(fat_report) / 2:]
+    # half_report = fat_report[len(fat_report) // 2:]
+    # # eliminate final row with aggregate results
+    # sanity_check_last_row = half_report[-1]
+    # half_report = half_report[:len(half_report) - 1]
 
-    
+    from_slice = 100 #TODO select somehow
+    to_slice = 200
 
+    partial_report = fat_report[from_slice:to_slice]
+
+    __display_fat_report(partial_report)
+    __display_partial_volume(volume, from_slice, to_slice)
+
+def __display_partial_volume(volume, from_slice, to_slice):
+
+    volume_array = sitk.GetArrayFromImage(volume)
+
+    cm = plt.get_cmap('gray')
+    cm_hot = plt.get_cmap('inferno')  # copper
+    zd, yd, xd = volume_array.shape
+
+    im = volume_array[from_slice:to_slice, yd // 2, :]
+    im = np.uint8(cm(im) * 255)
+
+    im = Image.fromarray(im).convert('RGB')
+    im = im.resize((150, 150))
+    # im = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
+    # im = Image.fromarray(im).convert('RGB')
+    # imgs.append(im.resize((150, 150)))
+    st.image(im)
+
+def __display_fat_report(report):
+    visceral_tissue = 0
+    subcutaneous_tissue = 0
+    sanity_check_total = 0
+    for row in report:
+        visceral_tissue += float(row['vatVol'])
+        subcutaneous_tissue += float(row['satVol'])
+        sanity_check_total += float(row['tatVol'])
+
+    visceral_tissue, subcutaneous_tissue = normalise_tissues(visceral_tissue, subcutaneous_tissue)
+    total_tissue = visceral_tissue + subcutaneous_tissue
+    visceral_ratio = visceral_tissue / total_tissue * 100
+    subcut_ratio = subcutaneous_tissue / total_tissue * 100
+    visc_to_subcut_ratio = visceral_tissue / subcutaneous_tissue * 100
+
+    st.text(f"visceral to subcutaneous ratio {visc_to_subcut_ratio}")
+    st.text(f"visceral ratio {visceral_ratio}")
+    st.text(f"subcutaneous ratio {subcut_ratio}")
+    print("visceral", visceral_tissue)
+    print("subcut", subcutaneous_tissue)
+    print("total", total_tissue)
+    print("total sanity check", sanity_check_total)
+    print(f"visceral ratio {visceral_ratio}%")
+    print(f"sucut ration {subcut_ratio}%")
+    print(f"vat to sat {visc_to_subcut_ratio}%")
+
+
+def normalise_tissues(visceral_tissue, subcutaneous_tissue):
+    # TODO implement
+    return visceral_tissue, subcutaneous_tissue
 
 def ct_muscle_segment(source_file):
     print("ct muscle segment called with", source_file)
@@ -211,6 +274,23 @@ def move_files_to_shared_directory(source_dir):
 
     # TODO fix hardcoding
     return os.path.join(input, "files")
+
+# TODO delete this
+def read_csv(filepath):
+
+    import csv
+    with open(filepath) as csv_file:
+        lines = csv_file.readlines()
+        # remove all whitespaces
+        lines = [line.replace(' ', '') for line in lines]
+
+        csv_dict = csv.DictReader(lines)
+        dict_rows = []
+        for row in csv_dict:
+            dict_rows.append(row)
+
+        return dict_rows
+
 
 if __name__ == "__main__":
     print(sys.version)
@@ -339,10 +419,19 @@ if __name__ == "__main__":
 
 
             # TODO development delete this
+            # from workers.nifti_reader import read_nifti_image
+            # original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
+            # muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
+            # display_ct_muscle_segment_volume(original, muscle_segmentation)
+
             from workers.nifti_reader import read_nifti_image
-            original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
-            muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
-            display_ct_muscle_segment_volume(original, muscle_segmentation)
+
+            volume = read_nifti_image("/app/source/streamlit_pipeline/"
+                                      "fat_report_second_opinion/Case001_from_dcm.nii.gz")
+            fat_report = read_csv("/app/source/streamlit_pipeline/fat_report_second_opinion"
+                                  "/Case001_nifticonv_fat_report.txt")
+
+            display_fat_report(volume, fat_report)
 
     ##### XNAT connection #####
 
