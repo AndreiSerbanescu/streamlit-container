@@ -97,10 +97,12 @@ def display_fat_report(volume, fat_report):
     from_slice = 100 #TODO select somehow
     to_slice = 200
 
-    partial_report = fat_report[from_slice:to_slice]
+    partial_report = fat_report
+    # partial_report = fat_report[from_slice:to_slice]
 
-    __display_fat_report(partial_report)
+    __display_fat_report(partial_report, last_row)
     __display_partial_volume(volume, from_slice, to_slice)
+    print("last row", last_row)
 
 def __display_partial_volume(volume, from_slice, to_slice):
 
@@ -120,7 +122,9 @@ def __display_partial_volume(volume, from_slice, to_slice):
     # imgs.append(im.resize((150, 150)))
     st.image(im)
 
-def __display_fat_report(report):
+# TODO here we assume (from observation)
+# the last row shows the true volume in cm cubed
+def __display_fat_report(report, last_row):
     visceral_tissue = 0
     subcutaneous_tissue = 0
     sanity_check_total = 0
@@ -129,11 +133,13 @@ def __display_fat_report(report):
         subcutaneous_tissue += float(row['satVol'])
         sanity_check_total += float(row['tatVol'])
 
-    visceral_tissue, subcutaneous_tissue = normalise_tissues(visceral_tissue, subcutaneous_tissue)
+    total_in_cm3 = float(last_row["tatVol"])
+
+    visceral_tissue, subcutaneous_tissue = transform_in_cm3(visceral_tissue, subcutaneous_tissue, total_in_cm3)
     total_tissue = visceral_tissue + subcutaneous_tissue
-    visceral_ratio = visceral_tissue / total_tissue * 100
-    subcut_ratio = subcutaneous_tissue / total_tissue * 100
-    visc_to_subcut_ratio = visceral_tissue / subcutaneous_tissue * 100
+    visceral_ratio = visceral_tissue / total_tissue
+    subcut_ratio = subcutaneous_tissue / total_tissue
+    visc_to_subcut_ratio = visceral_tissue / subcutaneous_tissue
 
     st.text(f"visceral to subcutaneous ratio {visc_to_subcut_ratio}")
     st.text(f"visceral ratio {visceral_ratio}")
@@ -146,10 +152,14 @@ def __display_fat_report(report):
     print(f"sucut ration {subcut_ratio}%")
     print(f"vat to sat {visc_to_subcut_ratio}%")
 
+def transform_in_cm3(visceral_tissue, subcutaneous_tissue, total_in_cm3):
+    total = visceral_tissue + subcutaneous_tissue
 
-def normalise_tissues(visceral_tissue, subcutaneous_tissue):
-    # TODO implement
-    return visceral_tissue, subcutaneous_tissue
+    ratio = total_in_cm3 / total
+
+    visceral_in_cm3 = ratio * visceral_tissue
+    subcutaneous_in_cm3 = ratio * subcutaneous_tissue
+    return visceral_in_cm3, subcutaneous_in_cm3
 
 def ct_muscle_segment(source_file):
     print("ct muscle segment called with", source_file)
