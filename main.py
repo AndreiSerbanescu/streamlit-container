@@ -21,6 +21,8 @@ from plotter import generateHUplots
 import subprocess as sb
 from threading import Thread
 from streamlit.ReportThread import add_report_ctx
+from functools import reduce
+import operator
 
 def analyze(img, msk, num_thresholds = 100):
 
@@ -114,29 +116,65 @@ def convert_report_to_cm3(fat_report):
 
     return fat_report_cm3
 
+def display_fat_report(fat_report):
 
-def display_fat_report(volume, fat_report):
+    st.markdown('**Fat Report**')
 
-    st.markdown('**Fat Report - considering lower half**')
+    sat_vols = [elem['satVol'] for elem in fat_report]
+    vat_vols = [elem['vatVol'] for elem in fat_report]
 
-    last_row = fat_report[-1]
-    # remove last row
-    fat_report = fat_report[:len(fat_report) - 1]
-    # as of right now displaying information about lower half
-    # half_report = fat_report[len(fat_report) // 2:]
-    # # eliminate final row with aggregate results
-    # sanity_check_last_row = half_report[-1]
-    # half_report = half_report[:len(half_report) - 1]
+    st.markdown("**Total fat tissue information**")
+    __display_agg_fat_report_info(sat_vols, vat_vols, 0, len(sat_vols))
 
-    from_slice = 100 #TODO select somehow
-    to_slice = 200
+    st.markdown("**Lower half tissue information**")
+    __display_agg_fat_report_info(sat_vols, vat_vols, len(sat_vols) // 2, len(sat_vols))
 
-    partial_report = fat_report
-    # partial_report = fat_report[from_slice:to_slice]
+    st.markdown("**Lower third tissue information**")
+    __display_agg_fat_report_info(sat_vols, vat_vols, len(sat_vols) * 2 // 3, len(sat_vols))
 
-    __display_fat_report(partial_report, last_row)
-    __display_partial_volume(volume, from_slice, to_slice)
-    print("last row", last_row)
+    from_slice = 100
+    to_slice = 230
+
+    st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
+    __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice)
+
+def __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice):
+    # from_slice inclusive
+    # to_slice exclusive
+
+    partial_sats = sat_vols[from_slice:to_slice]
+    partial_vats = vat_vols[from_slice:to_slice]
+
+    sat_tissue_cm3 = reduce(operator.add, partial_sats)
+    vat_tissue_cm3 = reduce(operator.add, partial_vats)
+
+    st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
+    st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
+    st.text(f"subcutaneous volume: {vat_tissue_cm3:.2f} cm3")
+
+
+# def display_fat_report(volume, fat_report):
+#
+#     st.markdown('**Fat Report - considering lower half**')
+#
+#     last_row = fat_report[-1]
+#     # remove last row
+#     fat_report = fat_report[:len(fat_report) - 1]
+#     # as of right now displaying information about lower half
+#     # half_report = fat_report[len(fat_report) // 2:]
+#     # # eliminate final row with aggregate results
+#     # sanity_check_last_row = half_report[-1]
+#     # half_report = half_report[:len(half_report) - 1]
+#
+#     from_slice = 100 #TODO select somehow
+#     to_slice = 200
+#
+#     partial_report = fat_report
+#     # partial_report = fat_report[from_slice:to_slice]
+#
+#     __display_fat_report(partial_report, last_row)
+#     __display_partial_volume(volume, from_slice, to_slice)
+#     print("last row", last_row)
 
 def __display_partial_volume(volume, from_slice, to_slice):
 
@@ -241,7 +279,7 @@ def display_ct_muscle_segment_volume(original, segmentation):
 def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, fat_report_cm3):
 
     display_lungmask_segmentation(original_array, lung_seg)
-
+    display_fat_report(fat_report_cm3)
     __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_cm3)
 
 def display_lungmask_segmentation(original_array, segmentation_array):
