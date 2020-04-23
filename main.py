@@ -81,6 +81,40 @@ def ct_fat_report(source_file):
     # TODO better display
     # display_fat_report(fat_report_csv)
 
+def convert_report_to_cm3(fat_report):
+
+    last_row = fat_report[-1]
+    fat_report = fat_report[:len(fat_report) - 1]
+
+    visceral_tissue = 0
+    subcutaneous_tissue = 0
+    for row in fat_report:
+        visceral_tissue += float(row['vatVol'])
+        subcutaneous_tissue += float(row['satVol'])
+
+    total_in_cm3 = float(last_row["tatVol"])
+    total = visceral_tissue + subcutaneous_tissue
+
+    ratio = total_in_cm3 / total
+
+    fat_report_cm3 = []
+    for row in fat_report:
+        visceral_tissue = float(row['vatVol'])
+        subcutaneous_tissue = float(row['satVol'])
+
+        visc_tissue_cm3 = ratio * visceral_tissue
+        subcut_tissue_cm3 = ratio * subcutaneous_tissue
+
+        row_dict_cm3 = {
+            'vatVol': visc_tissue_cm3,
+            'satVol': subcut_tissue_cm3
+        }
+
+        fat_report_cm3.append(row_dict_cm3)
+
+    return fat_report_cm3
+
+
 def display_fat_report(volume, fat_report):
 
     st.markdown('**Fat Report - considering lower half**')
@@ -191,23 +225,149 @@ def display_ct_muscle_segment_volume(original, segmentation):
 
     display_volume_and_mask(original_array, segmentation_array)
 
+#
+# def display_volume_and_masks(original_array, segmentation_arrays):
+#
+#     num_labels = [seg.max() for seg in segmentation_arrays]
+#     imgs = []
+#
+#     cm = plt.get_cmap('gray')
+#     cm_hot = plt.get_cmap('inferno')
+#     zd, yd, xd = original_array.shape
+#
+#     for i in range(zd):
+#
+
+def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, fat_report_cm3):
+
+    display_lungmask_segmentation(original_array, lung_seg)
+
+    __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_cm3)
+
+def display_lungmask_segmentation(original_array, segmentation_array):
+
+    input_nifti = sitk.GetImageFromArray(original_array)
+    spx, spy, spz = input_nifti.GetSpacing()
+
+    # result_out = sitk.GetImageFromArray(segmentation_array)
+    # result_out.CopyInformation(input_image)
+    # sitk.WriteImage(result_out, os.path.join(dir_, 'segmentation.nii.gz'))
+    # bar2.progress(100)
+
+    # output_nda = sitk.GetArrayFromImage(result_out)
+    st.header("HU distribution:")
+    generateHUplots.generateHUPlots(original_array, segmentation_array, 2)
+
+    right = np.count_nonzero(segmentation_array == 1) * spx * spy * spz
+    left = np.count_nonzero(segmentation_array == 2) * spx * spy * spz
+
+    st.header("Result:")
+    st.header(f'right lung: {right} mm\N{SUPERSCRIPT THREE}')
+    st.header(f'left lung: {left} mm\N{SUPERSCRIPT THREE}')
+
+    st.markdown('**Segmentation by:** Johannes Hofmanninger, Forian Prayer, Jeanny Pan, Sebastian Röhrich, \
+                        Helmut Prosch and Georg Langs. "Automatic lung segmentation in routine imaging \
+                        is a data diversity problem, not a methodology problem". 1 2020, \
+                        [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
+
+
+def __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_cm3):
+    original_imgs = get_slices_from_volume(original_array, lung_seg)
+    lung_seg_imgs = get_mask_slices_from_volume(lung_seg)
+    muscle_seg_imgs = get_mask_slices_from_volume(muscle_seg)
+
+    all_imgs = list(zip(original_imgs, lung_seg_imgs, muscle_seg_imgs))
+
+    for idx in range(len(all_imgs)):
+
+        vatVol_cm3 = fat_report_cm3[idx]['vatVol']
+        satVol_cm3 = fat_report_cm3[idx]['satVol']
+
+        st.text(f"Slice {idx + 1} / {len(all_imgs)}")
+        st.text(f"Visceral volume {vatVol_cm3:.3f} cm3")
+        st.text(f"Subcutaneous volume {satVol_cm3:.3f} cm3")
+
+        img_tuple = all_imgs[idx]
+        img_list = list(img_tuple)
+        st.image(img_list, caption=["Volume", "Lung Mask", "Muscle Mask"])
+
+
+
+def get_slices_from_volume(original_array, lung_seg):
+    imgs = []
+    cm = plt.get_cmap('gray')
+    zd = original_array.shape[0]
+
+    for i in range(zd):
+        mskmax = original_array[lung_seg > 0].max()
+        mskmin = original_array[lung_seg > 0].min()
+        im_arr = (original_array[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
+        im_arr = np.uint8(cm(im_arr) * 255)
+        im = Image.fromarray(im_arr).convert('RGB')
+        imgs.append(im.resize((150, 150)))
+
+    return imgs
+
+def get_mask_slices_from_volume(mask_array):
+    num_labels = mask_array.max()
+    imgs = []
+    cm_hot = plt.get_cmap('inferno')  # copper
+    zd = mask_array.shape[0]
+    for i in range(zd):
+        mask_cm_hot = np.uint8(cm_hot(mask_array[i, :, :].astype(float) / num_labels) * 255)
+        mask = Image.fromarray(mask_cm_hot).convert('RGB')
+        imgs.append(mask.resize((150, 150)))
+
+    return imgs
+
 
 def display_volume_and_mask(original_array, segmentation_array):
+
+
     num_labels = segmentation_array.max()
     imgs = []
     cm = plt.get_cmap('gray')
     cm_hot = plt.get_cmap('inferno')  # copper
     zd, yd, xd = original_array.shape
-    for i in range(zd):
+    # for i in range(zd):
+    for i in range(2):
         mskmax = original_array[segmentation_array > 0].max()
         mskmin = original_array[segmentation_array > 0].min()
-        im = (original_array[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
-        im = np.uint8(cm(im) * 255)
-        im = Image.fromarray(im).convert('RGB')
+        im_arr = (original_array[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
+        im_arr_copy = np.copy(im_arr)
+        im_arr_copy = np.uint8(im_arr_copy)
+        im_arr = np.uint8(cm(im_arr) * 255)
+        im = Image.fromarray(im_arr).convert('RGBA')
         imgs.append(im.resize((150, 150)))
-        im = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
-        im = Image.fromarray(im).convert('RGB')
-        imgs.append(im.resize((150, 150)))
+
+        print(segmentation_array[i][0][0])
+
+        # seg_with_vol = np.where(segmentation_array[i] == 0, original_array[i], segmentation_array[i])
+        mask_arr = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
+        # mask_arr = np.uint8(cm_hot(seg_with_vol.astype(float) / num_labels) * 255)
+
+
+        # mask_arr = np.where(segmentation_array[i] != 0, mask_arr, im_arr)
+
+        mask = Image.fromarray(mask_arr).convert('RGBA')
+        # black = (0, 0, 3)
+
+        # mask_np = np.asarray(mask.getdata())
+        # print("unique mask np", np.unique(mask_np))
+
+        # mask_data = [(0, 0, 0, 0) if item[:3] == black else item for item in mask.getdata()]
+        # mask.putdata(mask_data)
+        # mask = Image.fromarray(mask_arr)
+
+        # TODO fix
+        mask = Image.blend(im, mask, alpha=0.5)
+        # red = Image.new('RGB', im.size, (255, 0, 0))
+        # mask = Image.composite(im, red, mask).convert('RGB')
+
+
+
+        imgs.append(mask.resize((150, 150)))
+
     st.image(imgs)
 
 
@@ -236,36 +396,9 @@ def lesion_detect_seg(source_file):
 def lungmask_segment(source_dir):
     print(filename)
     segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
-    zd, yd, xd = input_nda.shape
+    display_lungmask_segmentation(segmentation, input_nda, spx, spy, spz)
 
-    # TODO get muscle segmentation
-    #   segmenter.ct_muscle_segment_dcm("/path/to/dcm/directory")
-    #   segmenter.ct_muscle_segment_nifti("/path/to/nifti/volume.nii.gz")
-
-    result_out = sitk.GetImageFromArray(segmentation)
-    # result_out.CopyInformation(input_image)
-    sitk.WriteImage(result_out, os.path.join(dir_, 'segmentation.nii.gz'))
-    bar2.progress(100)
-
-    output_nda = sitk.GetArrayFromImage(result_out)
-    st.header("HU distribution:")
-    generateHUplots.generateHUPlots(input_nda, output_nda, 2)
-
-    right = np.count_nonzero(output_nda == 1) * spx * spy * spz
-    left = np.count_nonzero(output_nda == 2) * spx * spy * spz
-    print(right)
-    print(left)
-
-    st.header("Result:")
-    st.header(f'right lung: {right} mm\N{SUPERSCRIPT THREE}')
-    st.header(f'left lung: {left} mm\N{SUPERSCRIPT THREE}')
-
-    st.markdown('**Segmentation by:** Johannes Hofmanninger, Forian Prayer, Jeanny Pan, Sebastian Röhrich, \
-                    Helmut Prosch and Georg Langs. "Automatic lung segmentation in routine imaging \
-                    is a data diversity problem, not a methodology problem". 1 2020, \
-                    [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
-
-    display_volume_and_mask(input_nda, output_nda)
+    # display_volume_and_mask(input_nda, output_nda)
 
 def move_files_to_shared_directory(source_dir):
 
@@ -436,12 +569,29 @@ if __name__ == "__main__":
 
             from workers.nifti_reader import read_nifti_image
 
-            volume = read_nifti_image("/app/source/streamlit_pipeline/"
-                                      "fat_report_second_opinion/Case001_from_dcm.nii.gz")
+            # volume = read_nifti_image("/app/source/streamlit_pipeline/"
+            #                           "fat_report_second_opinion/Case001_from_dcm.nii.gz")
+
+            # display_fat_report(volume, fat_report)
+
+            volume = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
+            muscle_mask = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
+
+            volume_array = sitk.GetArrayFromImage(volume)
+            muscle_mask_array = sitk.GetArrayFromImage(muscle_mask)
+            lung_mask_array = np.load("/app/source/lungmask_segmentation.npy")
+
             fat_report = read_csv("/app/source/streamlit_pipeline/fat_report_second_opinion"
                                   "/Case001_nifticonv_fat_report.txt")
 
-            display_fat_report(volume, fat_report)
+
+            fat_report_cm3 = convert_report_to_cm3(fat_report)
+            display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array, fat_report_cm3)
+
+        # if st.button('Say hello'):
+        #     st.write('Why hello there')
+        # else:
+        #     st.write('Goodbye')
 
     ##### XNAT connection #####
 
