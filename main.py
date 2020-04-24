@@ -150,7 +150,7 @@ def __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice):
 
     st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
     st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
-    st.text(f"subcutaneous volume: {vat_tissue_cm3:.2f} cm3")
+    st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
 
 
 # def display_fat_report(volume, fat_report):
