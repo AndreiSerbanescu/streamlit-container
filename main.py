@@ -541,33 +541,41 @@ if __name__ == "__main__":
 
     ##### File Selector #####
     #TODO upload of several (DICOM) files needs the streamlit dev version, which is difficult to use
-    #st.header("Please Upload the Chest CT Nifti here")
-    #st.file_uploader(label="", type=["nii", "nii.gz"])
+    st.header("Please Upload the Chest CT Nifti here")
+    # uploaded_file = st.file_uploader(label="", type=["nii", "nii.gz"])
+    # TODO allow nii as well
+    uploaded_file = st.file_uploader(label="", type=["nii.gz"])
+
     ##### File Selector #####
 
     ##### XNAT connection #####
     #this is behind a VPN so you need to connect your own XNAT
-    # with xnat.connect('http://armada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
-    #
-    #     pn = [x.name for x in session.projects.values()]
-    #     project_name = st.selectbox('Project', pn)
-    #     project = session.projects[project_name]
-    #
-    #     sn = [x.label for x in project.subjects.values()]
-    #     subject_name = st.selectbox('Subject', sn)
-    #     subject = project.subjects[subject_name]
-    #
-    #     en = [x.label for x in subject.experiments.values()]
-    #     experiment_name = st.selectbox('Session', en)
-    #     experiment = subject.experiments[experiment_name]
-    #
-    #     sen = [x.type for x in experiment.scans.values()]
-    #     scan_name = st.selectbox('Scan', sen)
-    #     scan = experiment.scans[scan_name]
-    #
-    #     sen = [x.label for x in scan.resources.values()]
-    #     res_name = st.selectbox('Resources', sen)
-    #     resource = scan.resources[res_name]
+
+    xnat_working = True
+    try:
+        with xnat.connect('http://armada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
+
+            pn = [x.name for x in session.projects.values()]
+            project_name = st.selectbox('Project', pn)
+            project = session.projects[project_name]
+
+            sn = [x.label for x in project.subjects.values()]
+            subject_name = st.selectbox('Subject', sn)
+            subject = project.subjects[subject_name]
+
+            en = [x.label for x in subject.experiments.values()]
+            experiment_name = st.selectbox('Session', en)
+            experiment = subject.experiments[experiment_name]
+
+            sen = [x.type for x in experiment.scans.values()]
+            scan_name = st.selectbox('Scan', sen)
+            scan = experiment.scans[scan_name]
+
+            sen = [x.label for x in scan.resources.values()]
+            res_name = st.selectbox('Resources', sen)
+            resource = scan.resources[res_name]
+    except:
+        xnat_working = False
 
     # TODO removing hardcoing of available containers
     # TODO have better names
@@ -579,63 +587,56 @@ if __name__ == "__main__":
 
     if st.button('download and analyse'):
         latest_iteration = st.empty()
-        bar = st.progress(0)
-        #
-        # shared_dir = os.environ.get('DATA_SHARE_PATH', '')
-        #
-        # dir_ = os.path.join('/tmp/', subject_name)
-        # scan.download_dir(dir_, verbose=True)
-        # download_dir = ''
-        # for path in Path(dir_).rglob('*.dcm'):
-        #     download_dir, file = os.path.split(str(path.resolve()))
-        #     break
-        # bar.progress(100)
-        #
-        # st.text('Analysis progress...')
-        # bar2 = st.progress(0)
-        #
-        # # PREVIOUS BEHAVIOUR:
-        #
-        # # model = lungmask.get_model('unet', 'R231CovidWeb')
-        # # input_image = utils.get_input_image(download_dir)
-        # # input_nda = sitk.GetArrayFromImage(input_image)
-        # # print(input_nda.shape)
-        # # zd, yd, xd = input_nda.shape
-        # #
-        # # spx, spy, spz = input_image.GetSpacing()
-        # # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
-        #
-        # # without bar
-        # filename = os.path.join(download_dir, file)
-        #
-        # source_dir = move_files_to_shared_directory(download_dir)
-        #
-        # threads = []
-        # for worker in workers_selected:
-        #     thread = Thread(target=worker_methods[worker], args=(source_dir,))
-        #
-        #     threads.append(thread)
-        #
-        #     # add streamlit context information to the thread
-        #     add_report_ctx(thread)
-        #     thread.start()
-        #
-        # for thread in threads:
-        #     thread.join()
 
+        if xnat_working:
+            bar = st.progress(0)
 
-        # TODO development delete this
-        # from workers.nifti_reader import read_nifti_image
-        # original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
-        # muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
-        # display_ct_muscle_segment_volume(original, muscle_segmentation)
+            shared_dir = os.environ.get('DATA_SHARE_PATH', '')
+
+            dir_ = os.path.join('/tmp/', subject_name)
+            scan.download_dir(dir_, verbose=True)
+            download_dir = ''
+            for path in Path(dir_).rglob('*.dcm'):
+                download_dir, file = os.path.split(str(path.resolve()))
+                break
+            bar.progress(100)
+
+            st.text('Analysis progress...')
+            bar2 = st.progress(0)
+
+            # without bar
+            filename = os.path.join(download_dir, file)
+
+            source_dir = move_files_to_shared_directory(download_dir)
+        else:
+            print(uploaded_file)
+            # writing file to disk
+            # this is docker specific
+            # TODO allow for .nii as well
+
+            file_type = ".nii.gz"
+            filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + file_type)
+
+            with open(filename, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            source_dir = os.path.split(filename)[1]
+
+        threads = []
+        for worker in workers_selected:
+            thread = Thread(target=worker_methods[worker], args=(source_dir,))
+
+            threads.append(thread)
+
+            # add streamlit context information to the thread
+            add_report_ctx(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
 
         from workers.nifti_reader import read_nifti_image
-
-        # volume = read_nifti_image("/app/source/streamlit_pipeline/"
-        #                           "fat_report_second_opinion/Case001_from_dcm.nii.gz")
-
-        # display_fat_report(volume, fat_report)
 
         volume = read_nifti_image("/app/source/converted-case001.nii.gz")
         muscle_mask = read_nifti_image("/app/source/muscle_segment_converted_case001.nii.gz")
@@ -656,13 +657,10 @@ if __name__ == "__main__":
 
         print("fat report len", len(fat_report))
         fat_report_cm3 = convert_report_to_cm3(fat_report)
-        display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array,
-                                                 detection_volume_array, fat_report_cm3)
+        # display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array,
+        #                                          detection_volume_array, fat_report_cm3)
 
-        # if st.button('Say hello'):
-        #     st.write('Why hello there')
-        # else:
-        #     st.write('Goodbye')
+
 
     ##### XNAT connection #####
 
