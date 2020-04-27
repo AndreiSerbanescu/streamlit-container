@@ -103,7 +103,8 @@ def plotGraph(img, msk, label = 1):
     counts, _ = analyze(img, msk == label)
     z = np.array(counts)
     plt.plot(x, y[label-1], 'g-')
-    plt.fill_between(x, y[label-1]-e[label-1], y[label-1]+e[label-1], color='lightgreen')
+    # plt.fill_between(x, y[label-1]-e[label-1], y[label-1]+e[label-1], color='lightgreen')
+    plt.fill_between(x, y[label - 1] - e[label - 1], np.clip(y[label - 1] + e[label - 1], 0.0, 1.0), color='lightgreen')
     plt.plot(x, z, 'r-', linewidth=3)
     plt.grid()
 
