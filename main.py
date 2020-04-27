@@ -118,6 +118,17 @@ def convert_report_to_cm3(fat_report):
 
 def display_fat_report(fat_report):
 
+    paper_citation = "**Fat Measurement by:** Summers RM, Liu J, Sussman DL, Dwyer AJ, Rehani B, Pickhardt PJ, Choi JR, Yao J. Association " \
+                     "Between Visceral Adiposity and Colorectal Polyps on CT Colonography. AJR 199:48–57 (2012)."\
+                     "Ryckman EM, Summers RM, Liu J, Del Rio AM, Pickhardt PJ. Visceral fat quantification in asymptomatic " \
+                     "adults using abdominal CT: is it predictive of future cardiac events? Abdom Imaging 40:222–225 (2015)."\
+                     "Liu J, Pattanaik S, Yao J, Dwyer AJ, Pickhardt PJ, Choi JR, Summers RM. Associations among Pericolonic Fat, Visceral Fat, " \
+                     "and Colorectal Polyps on CT Colonography. Obesity 23:470-476 (2015)."\
+                     "Lee SJ, Liu J, Yao J, Kanarek A, Summers RM, Pickhardt PJ. Fully Automated Segmentation" \
+                     " and Quantification of Visceral and Subcutaneous Fat at Abdominal CT: Application to a " \
+                     "longitudinal adult screening cohort. Br J Radiol 91(1089):20170968 (2018)"
+
+    st.markdown(paper_citation)
     st.markdown('**Fat Report**')
 
     sat_vols = [elem['satVol'] for elem in fat_report]
@@ -276,11 +287,23 @@ def display_ct_muscle_segment_volume(original, segmentation):
 #     for i in range(zd):
 #
 
-def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, fat_report_cm3):
+def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
+
+    # assert original_array.shape[0] == lung_seg.shape[0] \
+    #         == muscle_seg.shape[0] == len(fat_report_cm3)
+
+    print("len fat report cm 3", len(fat_report_cm3))
 
     display_lungmask_segmentation(original_array, lung_seg)
     display_fat_report(fat_report_cm3)
-    __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_cm3)
+
+
+    muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
+                      "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
+                      "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
+
+    st.markdown(muscle_citation)
+    __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3)
 
 def display_lungmask_segmentation(original_array, segmentation_array):
 
@@ -303,18 +326,20 @@ def display_lungmask_segmentation(original_array, segmentation_array):
     st.header(f'right lung: {right} mm\N{SUPERSCRIPT THREE}')
     st.header(f'left lung: {left} mm\N{SUPERSCRIPT THREE}')
 
-    st.markdown('**Segmentation by:** Johannes Hofmanninger, Forian Prayer, Jeanny Pan, Sebastian Röhrich, \
+    st.markdown('**Lung Segmentation by:** Johannes Hofmanninger, Forian Prayer, Jeanny Pan, Sebastian Röhrich, \
                         Helmut Prosch and Georg Langs. "Automatic lung segmentation in routine imaging \
                         is a data diversity problem, not a methodology problem". 1 2020, \
                         [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
 
-def __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_cm3):
+def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
     original_imgs = get_slices_from_volume(original_array, lung_seg)
     lung_seg_imgs = get_mask_slices_from_volume(lung_seg)
     muscle_seg_imgs = get_mask_slices_from_volume(muscle_seg)
+    detection_imgs = get_slices_from_volume(detection_array, lung_seg)
+    # detection_imgs = get_mask_slices_from_volume(detection_array)
 
-    all_imgs = list(zip(original_imgs, lung_seg_imgs, muscle_seg_imgs))
+    all_imgs = list(zip(original_imgs, lung_seg_imgs, muscle_seg_imgs, detection_imgs))
 
     for idx in range(len(all_imgs)):
 
@@ -327,7 +352,7 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, fat_report_
 
         img_tuple = all_imgs[idx]
         img_list = list(img_tuple)
-        st.image(img_list, caption=["Volume", "Lung Mask", "Muscle Mask"])
+        st.image(img_list, caption=["Volume", "Lung Mask", "Muscle Mask", "Detection Boxes"])
 
 
 
@@ -342,7 +367,7 @@ def get_slices_from_volume(original_array, lung_seg):
         im_arr = (original_array[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
         im_arr = np.uint8(cm(im_arr) * 255)
         im = Image.fromarray(im_arr).convert('RGB')
-        imgs.append(im.resize((150, 150)))
+        imgs.append(im.resize((250, 250)))
 
     return imgs
 
@@ -354,7 +379,7 @@ def get_mask_slices_from_volume(mask_array):
     for i in range(zd):
         mask_cm_hot = np.uint8(cm_hot(mask_array[i, :, :].astype(float) / num_labels) * 255)
         mask = Image.fromarray(mask_cm_hot).convert('RGB')
-        imgs.append(mask.resize((150, 150)))
+        imgs.append(mask.resize((250, 250)))
 
     return imgs
 
@@ -522,109 +547,117 @@ if __name__ == "__main__":
 
     ##### XNAT connection #####
     #this is behind a VPN so you need to connect your own XNAT
-    with xnat.connect('http://armada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
+    # with xnat.connect('http://armada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
+    #
+    #     pn = [x.name for x in session.projects.values()]
+    #     project_name = st.selectbox('Project', pn)
+    #     project = session.projects[project_name]
+    #
+    #     sn = [x.label for x in project.subjects.values()]
+    #     subject_name = st.selectbox('Subject', sn)
+    #     subject = project.subjects[subject_name]
+    #
+    #     en = [x.label for x in subject.experiments.values()]
+    #     experiment_name = st.selectbox('Session', en)
+    #     experiment = subject.experiments[experiment_name]
+    #
+    #     sen = [x.type for x in experiment.scans.values()]
+    #     scan_name = st.selectbox('Scan', sen)
+    #     scan = experiment.scans[scan_name]
+    #
+    #     sen = [x.label for x in scan.resources.values()]
+    #     res_name = st.selectbox('Resources', sen)
+    #     resource = scan.resources[res_name]
 
-        pn = [x.name for x in session.projects.values()]
-        project_name = st.selectbox('Project', pn)
-        project = session.projects[project_name]
+    # TODO removing hardcoing of available containers
+    # TODO have better names
 
-        sn = [x.label for x in project.subjects.values()]
-        subject_name = st.selectbox('Subject', sn)
-        subject = project.subjects[subject_name]
+    worker_methods, worker_names = get_worker_information()
 
-        en = [x.label for x in subject.experiments.values()]
-        experiment_name = st.selectbox('Session', en)
-        experiment = subject.experiments[experiment_name]
-
-        sen = [x.type for x in experiment.scans.values()]
-        scan_name = st.selectbox('Scan', sen)
-        scan = experiment.scans[scan_name]
-
-        sen = [x.label for x in scan.resources.values()]
-        res_name = st.selectbox('Resources', sen)
-        resource = scan.resources[res_name]
-
-        # TODO removing hardcoing of available containers
-        # TODO have better names
-
-        worker_methods, worker_names = get_worker_information()
-
-        workers_selected = st.multiselect('Containers', worker_names)
-
-
-        if st.button('download and analyse'):
-            latest_iteration = st.empty()
-            bar = st.progress(0)
-
-            shared_dir = os.environ.get('DATA_SHARE_PATH', '')
-
-            dir_ = os.path.join('/tmp/', subject_name)
-            scan.download_dir(dir_, verbose=True)
-            download_dir = ''
-            for path in Path(dir_).rglob('*.dcm'):
-                download_dir, file = os.path.split(str(path.resolve()))
-                break
-            bar.progress(100)
-
-            st.text('Analysis progress...')
-            bar2 = st.progress(0)
-
-            # PREVIOUS BEHAVIOUR:
-
-            # model = lungmask.get_model('unet', 'R231CovidWeb')
-            # input_image = utils.get_input_image(download_dir)
-            # input_nda = sitk.GetArrayFromImage(input_image)
-            # print(input_nda.shape)
-            # zd, yd, xd = input_nda.shape
-            #
-            # spx, spy, spz = input_image.GetSpacing()
-            # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
-
-            # without bar
-            filename = os.path.join(download_dir, file)
-
-            source_dir = move_files_to_shared_directory(download_dir)
-
-            threads = []
-            for worker in workers_selected:
-                thread = Thread(target=worker_methods[worker], args=(source_dir,))
-
-                threads.append(thread)
-
-                # add streamlit context information to the thread
-                add_report_ctx(thread)
-                thread.start()
-
-            for thread in threads:
-                thread.join()
+    workers_selected = st.multiselect('Containers', worker_names)
 
 
-            # TODO development delete this
-            # from workers.nifti_reader import read_nifti_image
-            # original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
-            # muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
-            # display_ct_muscle_segment_volume(original, muscle_segmentation)
+    if st.button('download and analyse'):
+        latest_iteration = st.empty()
+        bar = st.progress(0)
+        #
+        # shared_dir = os.environ.get('DATA_SHARE_PATH', '')
+        #
+        # dir_ = os.path.join('/tmp/', subject_name)
+        # scan.download_dir(dir_, verbose=True)
+        # download_dir = ''
+        # for path in Path(dir_).rglob('*.dcm'):
+        #     download_dir, file = os.path.split(str(path.resolve()))
+        #     break
+        # bar.progress(100)
+        #
+        # st.text('Analysis progress...')
+        # bar2 = st.progress(0)
+        #
+        # # PREVIOUS BEHAVIOUR:
+        #
+        # # model = lungmask.get_model('unet', 'R231CovidWeb')
+        # # input_image = utils.get_input_image(download_dir)
+        # # input_nda = sitk.GetArrayFromImage(input_image)
+        # # print(input_nda.shape)
+        # # zd, yd, xd = input_nda.shape
+        # #
+        # # spx, spy, spz = input_image.GetSpacing()
+        # # result = lungmask.apply(input_image, model, bar2, force_cpu=False, batch_size=20, volume_postprocessing=False)
+        #
+        # # without bar
+        # filename = os.path.join(download_dir, file)
+        #
+        # source_dir = move_files_to_shared_directory(download_dir)
+        #
+        # threads = []
+        # for worker in workers_selected:
+        #     thread = Thread(target=worker_methods[worker], args=(source_dir,))
+        #
+        #     threads.append(thread)
+        #
+        #     # add streamlit context information to the thread
+        #     add_report_ctx(thread)
+        #     thread.start()
+        #
+        # for thread in threads:
+        #     thread.join()
 
-            from workers.nifti_reader import read_nifti_image
 
-            # volume = read_nifti_image("/app/source/streamlit_pipeline/"
-            #                           "fat_report_second_opinion/Case001_from_dcm.nii.gz")
+        # TODO development delete this
+        # from workers.nifti_reader import read_nifti_image
+        # original            = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
+        # muscle_segmentation = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
+        # display_ct_muscle_segment_volume(original, muscle_segmentation)
 
-            # display_fat_report(volume, fat_report)
+        from workers.nifti_reader import read_nifti_image
 
-            volume = read_nifti_image("/app/source/ct_muscle_seg_output/converted_original.nii.gz")
-            muscle_mask = read_nifti_image("/app/source/ct_muscle_seg_output/muscle_mask.nii.gz")
+        # volume = read_nifti_image("/app/source/streamlit_pipeline/"
+        #                           "fat_report_second_opinion/Case001_from_dcm.nii.gz")
 
-            volume_array = sitk.GetArrayFromImage(volume)
-            muscle_mask_array = sitk.GetArrayFromImage(muscle_mask)
-            lung_mask_array = np.load("/app/source/lungmask_segmentation.npy")
+        # display_fat_report(volume, fat_report)
 
-            fat_report = read_csv("/app/source/streamlit_pipeline/fat_report_second_opinion"
-                                  "/Case001_nifticonv_fat_report.txt")
+        volume = read_nifti_image("/app/source/converted-case001.nii.gz")
+        muscle_mask = read_nifti_image("/app/source/muscle_segment_converted_case001.nii.gz")
+        detection_volume = read_nifti_image("/app/source/covid_lesion_detection_output/detection_converted-case001.nii.gz")
+
+        volume_array = sitk.GetArrayFromImage(volume)
+        muscle_mask_array = sitk.GetArrayFromImage(muscle_mask)
+        detection_volume_array = sitk.GetArrayFromImage(detection_volume)
+
+        print("volum dimensions", volume_array.shape)
+        print("muscle mask dimension", muscle_mask_array.shape)
+        print("detection vol dimensions", detection_volume_array.shape)
+
+        lung_mask_array = np.load("/app/source/lungmask_seg_converted_case001.npy")
+
+        fat_report = read_csv("/app/source/fat_report_converted_case001.txt")
 
 
-            fat_report_cm3 = convert_report_to_cm3(fat_report)
-            display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array, fat_report_cm3)
+        print("fat report len", len(fat_report))
+        fat_report_cm3 = convert_report_to_cm3(fat_report)
+        display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array,
+                                                 detection_volume_array, fat_report_cm3)
 
         # if st.button('Say hello'):
         #     st.write('Why hello there')
