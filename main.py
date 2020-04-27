@@ -71,17 +71,9 @@ def ct_fat_report(source_file):
     print("ct fat report called with", source_file)
 
     if segmenter.is_nifti(source_file):
-        fat_report_csv = segmenter.ct_fat_measure_nifti(source_file)
+        return segmenter.ct_fat_measure_nifti(source_file)
     else:
-        fat_report_csv = segmenter.ct_fat_measure_dcm(source_file)
-
-    data_load_state = st.text('Fat report data')
-    # Load 10,000 rows of data into the dataframe.
-    # Notify the reader that the data was successfully loaded.
-    data_load_state.text('Loading data...done!')
-
-    # TODO better display
-    # display_fat_report(fat_report_csv)
+        return segmenter.ct_fat_measure_dcm(source_file)
 
 def convert_report_to_cm3(fat_report):
 
@@ -117,6 +109,9 @@ def convert_report_to_cm3(fat_report):
     return fat_report_cm3
 
 def display_fat_report(fat_report):
+
+    # if fat_report is None:
+    #     return
 
     paper_citation = "**Fat Measurement by:** Summers RM, Liu J, Sussman DL, Dwyer AJ, Rehani B, Pickhardt PJ, Choi JR, Yao J. Association " \
                      "Between Visceral Adiposity and Colorectal Polyps on CT Colonography. AJR 199:48–57 (2012)."\
@@ -163,29 +158,6 @@ def __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice):
     st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
     st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
 
-
-# def display_fat_report(volume, fat_report):
-#
-#     st.markdown('**Fat Report - considering lower half**')
-#
-#     last_row = fat_report[-1]
-#     # remove last row
-#     fat_report = fat_report[:len(fat_report) - 1]
-#     # as of right now displaying information about lower half
-#     # half_report = fat_report[len(fat_report) // 2:]
-#     # # eliminate final row with aggregate results
-#     # sanity_check_last_row = half_report[-1]
-#     # half_report = half_report[:len(half_report) - 1]
-#
-#     from_slice = 100 #TODO select somehow
-#     to_slice = 200
-#
-#     partial_report = fat_report
-#     # partial_report = fat_report[from_slice:to_slice]
-#
-#     __display_fat_report(partial_report, last_row)
-#     __display_partial_volume(volume, from_slice, to_slice)
-#     print("last row", last_row)
 
 def __display_partial_volume(volume, from_slice, to_slice):
 
@@ -252,11 +224,7 @@ def ct_muscle_segment(source_file):
     else:
         muscle_segmentation, original = segmenter.ct_muscle_segment_dcm(source_file)
 
-    # TODO here we assume the volume is nifti
-    # TODO make ct_muscle_segment return the original volume
-    # TODO in nifti format as well
-
-    display_ct_muscle_segment_volume(original, muscle_segmentation)
+    return muscle_segmentation
 
 def display_ct_muscle_segment_volume(original, segmentation):
 
@@ -274,35 +242,22 @@ def display_ct_muscle_segment_volume(original, segmentation):
 
     display_volume_and_mask(original_array, segmentation_array)
 
-#
-# def display_volume_and_masks(original_array, segmentation_arrays):
-#
-#     num_labels = [seg.max() for seg in segmentation_arrays]
-#     imgs = []
-#
-#     cm = plt.get_cmap('gray')
-#     cm_hot = plt.get_cmap('inferno')
-#     zd, yd, xd = original_array.shape
-#
-#     for i in range(zd):
-#
 
+# PRE: original array and lung segmentation not None
+# rest can be None
 def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
 
-    # assert original_array.shape[0] == lung_seg.shape[0] \
-    #         == muscle_seg.shape[0] == len(fat_report_cm3)
+    assert original_array.shape[0] == lung_seg.shape[0] \
+            == muscle_seg.shape[0] == len(fat_report_cm3)
+
+    assert original_array is not None
+    assert lung_seg is not None
 
     print("len fat report cm 3", len(fat_report_cm3))
 
     display_lungmask_segmentation(original_array, lung_seg)
     display_fat_report(fat_report_cm3)
 
-
-    muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
-                      "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
-                      "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
-
-    st.markdown(muscle_citation)
     __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3)
 
 def display_lungmask_segmentation(original_array, segmentation_array):
@@ -333,6 +288,14 @@ def display_lungmask_segmentation(original_array, segmentation_array):
 
 
 def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
+
+
+    muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
+                      "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
+                      "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
+
+    st.markdown(muscle_citation)
+
     original_imgs = get_slices_from_volume(original_array, lung_seg)
     lung_seg_imgs = get_mask_slices_from_volume(lung_seg)
     muscle_seg_imgs = get_mask_slices_from_volume(muscle_seg)
@@ -442,7 +405,8 @@ def lesion_detect(source_file):
     else:
         attention_volume, detection_volume = segmenter.covid_detector_dcm(source_file)
 
-    # TODO display volumes
+
+    return attention_volume, detection_volume
 
 
 def lesion_detect_seg(source_file):
@@ -453,15 +417,13 @@ def lesion_detect_seg(source_file):
     else:
         mask_volume, detection_volume = segmenter.covid_detector_seg_dcm(source_file)
 
-    # TODO display volumes
+    return mask_volume, detection_volume
 
 
 def lungmask_segment(source_dir):
     print(filename)
     segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
-    display_lungmask_segmentation(segmentation, input_nda, spx, spy, spz)
-
-    # display_volume_and_mask(input_nda, output_nda)
+    return segmentation
 
 def move_files_to_shared_directory(source_dir):
 
@@ -622,41 +584,76 @@ if __name__ == "__main__":
 
             source_dir = os.path.split(filename)[1]
 
-        threads = []
-        for worker in workers_selected:
-            thread = Thread(target=worker_methods[worker], args=(source_dir,))
 
-            threads.append(thread)
+        from concurrent.futures import ThreadPoolExecutor
 
-            # add streamlit context information to the thread
-            add_report_ctx(thread)
-            thread.start()
+        future_map = {}
+        with ThreadPoolExecutor() as executor:
 
-        for thread in threads:
-            thread.join()
+            for worker in workers_selected:
+                method = worker_methods[worker]
+                args = (source_dir)
 
+                future = executor.submit(method, args)
+                future_map[worker] = future
+
+
+        for key in future_map:
+            future = future_map[key]
+
+            value = future.result()
+
+            print(f"got value for {key}:")
+            print(value)
+
+        # TODO refactor
+        LUNGMASK_SEGMENT = "Lungmask Segmentation"
+        CT_FAT_REPORT = "CT Fat Report"
+        CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
+        LESION_DETECTION = "Lesion Detection"
+        LESION_DETECTION_SEG = "Lesion Detection Segmentation"
 
         from workers.nifti_reader import read_nifti_image
 
-        volume = read_nifti_image("/app/source/converted-case001.nii.gz")
-        muscle_mask = read_nifti_image("/app/source/muscle_segment_converted_case001.nii.gz")
-        detection_volume = read_nifti_image("/app/source/covid_lesion_detection_output/detection_converted-case001.nii.gz")
+        # TODO here source dir assumes its nifti
+        # here source_dir assume
+        volume = read_nifti_image(source_dir)
+
+        muscle_mask = future_map.get(CT_MUSCLE_SEGMENTATION, None)
+        detection_volume = future_map.get(LESION_DETECTION, (None, None))[1]
+        lungmask_array = future_map.get(LUNGMASK_SEGMENT, None)
+        fat_report = future_map.get(CT_FAT_REPORT, None)
 
         volume_array = sitk.GetArrayFromImage(volume)
-        muscle_mask_array = sitk.GetArrayFromImage(muscle_mask)
-        detection_volume_array = sitk.GetArrayFromImage(detection_volume)
+        muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
+        detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
 
-        print("volum dimensions", volume_array.shape)
-        print("muscle mask dimension", muscle_mask_array.shape)
-        print("detection vol dimensions", detection_volume_array.shape)
+        fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
 
-        lung_mask_array = np.load("/app/source/lungmask_seg_converted_case001.npy")
+        display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array,
+                                                 detection_volume_array, fat_report_cm3)
 
-        fat_report = read_csv("/app/source/fat_report_converted_case001.txt")
-
-
-        print("fat report len", len(fat_report))
-        fat_report_cm3 = convert_report_to_cm3(fat_report)
+        # from workers.nifti_reader import read_nifti_image
+        #
+        # volume = read_nifti_image("/app/source/converted-case001.nii.gz")
+        # muscle_mask = read_nifti_image("/app/source/muscle_segment_converted_case001.nii.gz")
+        # detection_volume = read_nifti_image("/app/source/covid_lesion_detection_output/detection_converted-case001.nii.gz")
+        #
+        # volume_array = sitk.GetArrayFromImage(volume)
+        # muscle_mask_array = sitk.GetArrayFromImage(muscle_mask)
+        # detection_volume_array = sitk.GetArrayFromImage(detection_volume)
+        #
+        # print("volum dimensions", volume_array.shape)
+        # print("muscle mask dimension", muscle_mask_array.shape)
+        # print("detection vol dimensions", detection_volume_array.shape)
+        #
+        # lung_mask_array = np.load("/app/source/lungmask_seg_converted_case001.npy")
+        #
+        # fat_report = read_csv("/app/source/fat_report_converted_case001.txt")
+        #
+        #
+        # print("fat report len", len(fat_report))
+        # fat_report_cm3 = convert_report_to_cm3(fat_report)
         # display_volume_and_slice_information(volume_array, lung_mask_array, muscle_mask_array,
         #                                          detection_volume_array, fat_report_cm3)
 
