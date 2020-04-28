@@ -347,7 +347,7 @@ def lesion_detect_seg(source_file):
 
 def lungmask_segment(source_dir):
     segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
-    return segmentation
+    return segmentation, input_nda
 
 def move_files_to_shared_directory(source_dir):
 
@@ -417,15 +417,11 @@ def start_download_and_analyse(source_dir, workers_selected):
 
     # TODO make sure source dir is not empty
 
-    data_share = os.environ["DATA_SHARE_PATH"]
-    volume = read_nifti_image(os.path.join(data_share, source_dir))
-
     muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
     detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-    lungmask_array = value_map.get(LUNGMASK_SEGMENT, None)
+    lungmask_array, volume_array = value_map.get(LUNGMASK_SEGMENT, None)
     fat_report = value_map.get(CT_FAT_REPORT, None)
 
-    volume_array = sitk.GetArrayFromImage(volume)
     muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
     detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
 
