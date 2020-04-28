@@ -200,13 +200,6 @@ def __display_fat_report(report, last_row):
     st.text(f"visceral to subcutaneous ratio {visc_to_subcut_ratio}")
     st.text(f"visceral ratio {visceral_ratio}")
     st.text(f"subcutaneous ratio {subcut_ratio}")
-    print("visceral", visceral_tissue)
-    print("subcut", subcutaneous_tissue)
-    print("total", total_tissue)
-    print("total sanity check", sanity_check_total)
-    print(f"visceral ratio {visceral_ratio}%")
-    print(f"sucut ration {subcut_ratio}%")
-    print(f"vat to sat {visc_to_subcut_ratio}%")
 
 def transform_in_cm3(visceral_tissue, subcutaneous_tissue, total_in_cm3):
     total = visceral_tissue + subcutaneous_tissue
@@ -276,9 +269,6 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
     original_imgs = get_slices_from_volume(original_array, lung_seg)
     lung_seg_imgs = get_mask_slices_from_volume(lung_seg)
 
-    print("len of original imgs", len(original_imgs))
-    print("len of lung seg imgs", len(lung_seg_imgs))
-
     tuple_imgs = [original_imgs, lung_seg_imgs]
     captions = ["Volume", "Lung Mask"]
 
@@ -294,16 +284,7 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
 
     tuple_imgs = tuple(tuple_imgs)
 
-    print("len of tuple imgs", len(tuple_imgs))
-    print("len of tuple imgs", len(tuple_imgs[0]))
-    print("len of tuple imgs", len(tuple_imgs[1]))
-    print("captions", captions)
-
     all_imgs = list(zip(*tuple_imgs))
-
-    print("len of all imgs elem", len(all_imgs[0]))
-    print("all imgs elem", all_imgs[0])
-
 
     for idx in range(len(all_imgs)):
 
