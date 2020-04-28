@@ -23,6 +23,7 @@ from threading import Thread
 from streamlit.ReportThread import add_report_ctx
 from functools import reduce
 import operator
+import pdb
 
 def analyze(img, msk, num_thresholds = 100):
 
@@ -226,22 +227,6 @@ def ct_muscle_segment(source_file):
 
     return muscle_segmentation
 
-def display_ct_muscle_segment_volume(original, segmentation):
-
-    segmentation_array = sitk.GetArrayFromImage(segmentation)
-    original_array     = sitk.GetArrayFromImage(original)
-
-    spx, spy, spz = original.GetSpacing()
-
-    muscle = np.count_nonzero(segmentation_array == 1) * spx * spy * spz
-
-    st.header("Result:")
-    st.header(f'muscle volume: {muscle} mm\N{SUPERSCRIPT THREE}')
-    #
-    st.markdown('**Muscle Segmentation** by TODO paper here')
-
-    display_volume_and_mask(original_array, segmentation_array)
-
 
 # PRE: original array and lung segmentation not None
 # rest can be None
@@ -249,8 +234,6 @@ def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, d
 
     assert original_array is not None
     assert lung_seg is not None
-
-    print("len fat report cm 3", len(fat_report_cm3))
 
     display_lungmask_segmentation(original_array, lung_seg)
 
@@ -283,14 +266,18 @@ def display_lungmask_segmentation(original_array, segmentation_array):
 def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
 
 
-    muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
-                      "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
-                      "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
+    if muscle_seg is not None:
+        muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
+                          "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
+                          "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
 
-    st.markdown(muscle_citation)
+        st.markdown(muscle_citation)
 
     original_imgs = get_slices_from_volume(original_array, lung_seg)
     lung_seg_imgs = get_mask_slices_from_volume(lung_seg)
+
+    print("len of original imgs", len(original_imgs))
+    print("len of lung seg imgs", len(lung_seg_imgs))
 
     tuple_imgs = [original_imgs, lung_seg_imgs]
     captions = ["Volume", "Lung Mask"]
@@ -307,7 +294,16 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
 
     tuple_imgs = tuple(tuple_imgs)
 
+    print("len of tuple imgs", len(tuple_imgs))
+    print("len of tuple imgs", len(tuple_imgs[0]))
+    print("len of tuple imgs", len(tuple_imgs[1]))
+    print("captions", captions)
+
     all_imgs = list(zip(tuple_imgs))
+
+    print("len of all imgs elem", len(all_imgs[0]))
+    print("all imgs elem", all_imgs[0])
+
 
     for idx in range(len(all_imgs)):
 
@@ -319,7 +315,10 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
             st.text(f"Visceral volume {vatVol_cm3:.3f} cm3")
             st.text(f"Subcutaneous volume {satVol_cm3:.3f} cm3")
 
+
         img_tuple = all_imgs[idx]
+
+        print("len of image tuple in for loop", len(img_tuple))
         img_list = list(img_tuple)
         st.image(img_list, caption=captions)
 
@@ -351,57 +350,6 @@ def get_mask_slices_from_volume(mask_array):
         imgs.append(mask.resize((250, 250)))
 
     return imgs
-
-
-def display_volume_and_mask(original_array, segmentation_array):
-
-
-    num_labels = segmentation_array.max()
-    imgs = []
-    cm = plt.get_cmap('gray')
-    cm_hot = plt.get_cmap('inferno')  # copper
-    zd, yd, xd = original_array.shape
-    # for i in range(zd):
-    for i in range(2):
-        mskmax = original_array[segmentation_array > 0].max()
-        mskmin = original_array[segmentation_array > 0].min()
-        im_arr = (original_array[i, :, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
-        im_arr_copy = np.copy(im_arr)
-        im_arr_copy = np.uint8(im_arr_copy)
-        im_arr = np.uint8(cm(im_arr) * 255)
-        im = Image.fromarray(im_arr).convert('RGBA')
-        imgs.append(im.resize((150, 150)))
-
-        print(segmentation_array[i][0][0])
-
-        # seg_with_vol = np.where(segmentation_array[i] == 0, original_array[i], segmentation_array[i])
-        mask_arr = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
-        # mask_arr = np.uint8(cm_hot(seg_with_vol.astype(float) / num_labels) * 255)
-
-
-        # mask_arr = np.where(segmentation_array[i] != 0, mask_arr, im_arr)
-
-        mask = Image.fromarray(mask_arr).convert('RGBA')
-        # black = (0, 0, 3)
-
-        # mask_np = np.asarray(mask.getdata())
-        # print("unique mask np", np.unique(mask_np))
-
-        # mask_data = [(0, 0, 0, 0) if item[:3] == black else item for item in mask.getdata()]
-        # mask.putdata(mask_data)
-        # mask = Image.fromarray(mask_arr)
-
-        # TODO fix
-        mask = Image.blend(im, mask, alpha=0.5)
-        # red = Image.new('RGB', im.size, (255, 0, 0))
-        # mask = Image.composite(im, red, mask).convert('RGB')
-
-
-
-        imgs.append(mask.resize((150, 150)))
-
-    st.image(imgs)
-
 
 def lesion_detect(source_file):
     print("lesion detect called with", source_file)
@@ -624,13 +572,27 @@ if __name__ == "__main__":
         # here source_dir assume
         # TODO fix hardcoding
 
-        data_share = os.environ["DATA_SHARE_PATH"]
-        volume = read_nifti_image(os.path.join(data_share, source_dir))
+        # TODO make sure source dir is not empty
 
-        muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
-        detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-        lungmask_array = value_map.get(LUNGMASK_SEGMENT, None)
-        fat_report = value_map.get(CT_FAT_REPORT, None)
+        data_share = os.environ["DATA_SHARE_PATH"]
+        # volume = read_nifti_image(os.path.join(data_share, source_dir))
+        #
+        # muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
+        # detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
+        # lungmask_array = value_map.get(LUNGMASK_SEGMENT, None)
+        # fat_report = value_map.get(CT_FAT_REPORT, None)
+        #
+        # volume_array = sitk.GetArrayFromImage(volume)
+        # muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
+        # detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
+        #
+        # fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
+
+        volume = read_nifti_image("/app/source/all_outputs/input.nii.gz")
+        muscle_mask = None
+        detection_volume = None
+        lungmask_array = np.load("/app/source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy")
+        fat_report = None
 
         volume_array = sitk.GetArrayFromImage(volume)
         muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
