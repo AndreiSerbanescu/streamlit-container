@@ -385,6 +385,10 @@ def read_csv(filepath):
 
 def start_download_and_analyse(source_dir, workers_selected):
 
+    if len(workers_selected) == 0:
+        st.markdown("**Need to select at least one container**")
+        return
+
     worker_methods = get_worker_information()[0]
 
     future_map = {}
@@ -419,7 +423,7 @@ def start_download_and_analyse(source_dir, workers_selected):
 
     muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
     detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-    lungmask_array, volume_array = value_map.get(LUNGMASK_SEGMENT, None)
+    lungmask_array, volume_array = value_map.get(LUNGMASK_SEGMENT, (None, None))
     fat_report = value_map.get(CT_FAT_REPORT, None)
 
     muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
@@ -461,7 +465,11 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected):
         filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + file_type)
 
         with open(filename, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+            try:
+                f.write(uploaded_file.getbuffer())
+            except:
+                st.markdown("**No file uploaded**")
+                return
 
         source_dir = os.path.split(filename)[1]
 
