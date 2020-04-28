@@ -299,7 +299,7 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
     print("len of tuple imgs", len(tuple_imgs[1]))
     print("captions", captions)
 
-    all_imgs = list(zip(tuple_imgs))
+    all_imgs = list(zip(*tuple_imgs))
 
     print("len of all imgs elem", len(all_imgs[0]))
     print("all imgs elem", all_imgs[0])
@@ -307,11 +307,12 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
 
     for idx in range(len(all_imgs)):
 
+        st.text(f"Slice {idx + 1} / {len(all_imgs)}")
+
         if fat_report_cm3 is not None:
             vatVol_cm3 = fat_report_cm3[idx]['vatVol']
             satVol_cm3 = fat_report_cm3[idx]['satVol']
 
-            st.text(f"Slice {idx + 1} / {len(all_imgs)}")
             st.text(f"Visceral volume {vatVol_cm3:.3f} cm3")
             st.text(f"Subcutaneous volume {satVol_cm3:.3f} cm3")
 
@@ -469,7 +470,7 @@ if __name__ == "__main__":
 
     xnat_working = True
     try:
-        with xnat.connect('http://armada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
+        with xnat.connect('http://FAKEarmada.doc.ic.ac.uk/xnat-web-1.7.6', user="admin", password="admin") as session:
 
             pn = [x.name for x in session.projects.values()]
             project_name = st.selectbox('Project', pn)
@@ -575,24 +576,25 @@ if __name__ == "__main__":
         # TODO make sure source dir is not empty
 
         data_share = os.environ["DATA_SHARE_PATH"]
-        # volume = read_nifti_image(os.path.join(data_share, source_dir))
-        #
-        # muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
-        # detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-        # lungmask_array = value_map.get(LUNGMASK_SEGMENT, None)
-        # fat_report = value_map.get(CT_FAT_REPORT, None)
-        #
-        # volume_array = sitk.GetArrayFromImage(volume)
-        # muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
-        # detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
-        #
-        # fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
+        volume = read_nifti_image(os.path.join(data_share, source_dir))
 
-        volume = read_nifti_image("/app/source/all_outputs/input.nii.gz")
-        muscle_mask = None
-        detection_volume = None
-        lungmask_array = np.load("/app/source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy")
-        fat_report = None
+        muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
+        detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
+        lungmask_array = value_map.get(LUNGMASK_SEGMENT, None)
+        fat_report = value_map.get(CT_FAT_REPORT, None)
+
+        volume_array = sitk.GetArrayFromImage(volume)
+        muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
+        detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
+
+        fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
+
+        # volume = read_nifti_image("/app/source/all_outputs/input.nii.gz")
+        # muscle_mask = None
+        # detection_volume = read_nifti_image("/app/source/all_outputs/detection_input.nii.gz")
+        # lungmask_array = np.load("/app/source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy")
+        # # fat_report = read_csv("/app/source/all_outputs/fat_report_converted_case001.txt")
+        # fat_report = None
 
         volume_array = sitk.GetArrayFromImage(volume)
         muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
