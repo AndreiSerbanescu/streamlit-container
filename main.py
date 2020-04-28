@@ -15,6 +15,12 @@ import operator
 from workers.nifti_reader import read_nifti_image
 from concurrent.futures import ThreadPoolExecutor
 
+LUNGMASK_SEGMENT = "Lungmask Segmentation"
+CT_FAT_REPORT = "CT Fat Report"
+CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
+LESION_DETECTION = "Lesion Detection"
+LESION_DETECTION_SEG = "Lesion Detection Segmentation"
+
 def analyze(img, msk, num_thresholds = 100):
 
     X = img[msk].flatten()
@@ -39,11 +45,6 @@ def get_files(connection, project, subject, session, scan, resource):
     return files
 
 def get_worker_information():
-    LUNGMASK_SEGMENT = "Lungmask Segmentation"
-    CT_FAT_REPORT = "CT Fat Report"
-    CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
-    LESION_DETECTION = "Lesion Detection"
-    LESION_DETECTION_SEG = "Lesion Detection Segmentation"
 
     worker_names = [LUNGMASK_SEGMENT, CT_FAT_REPORT, CT_MUSCLE_SEGMENTATION,
                     LESION_DETECTION, LESION_DETECTION_SEG]
@@ -479,7 +480,14 @@ def worker_selection():
     # TODO removing hardcoing of available containers
     # TODO have better names
     worker_methods, worker_names = get_worker_information()
+
+    worker_names.remove(LUNGMASK_SEGMENT)
+
+    st.text("Running lungmask segmentation by default")
     workers_selected = st.multiselect('Containers', worker_names)
+
+    # lungmask segment runs by default
+    workers_selected.append(LUNGMASK_SEGMENT)
     return workers_selected
 
 if __name__ == "__main__":
