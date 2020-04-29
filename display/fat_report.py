@@ -1,6 +1,9 @@
 import streamlit as st
 from functools import reduce
 import operator
+import numpy as np
+from PIL import Image
+from matplotlib import pyplot as plt
 
 class FatReportDisplayer:
 
@@ -50,6 +53,7 @@ class FatReportDisplayer:
             to_slice = int(bottom * fat_report_len / 100)
 
             st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
+
             self.__display_agg_info(from_slice, to_slice)
 
 
@@ -67,6 +71,8 @@ class FatReportDisplayer:
 
         sat_tissue_cm3 = reduce(operator.add, partial_sats)
         vat_tissue_cm3 = reduce(operator.add, partial_vats)
+
+        self.__display_partial_volume(from_slice, to_slice)
 
         st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
         st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
@@ -109,20 +115,22 @@ class FatReportDisplayer:
 
         return fat_report_cm3
 
-# def __display_partial_volume(volume, from_slice, to_slice):
-#
-#     volume_array = sitk.GetArrayFromImage(volume)
-#
-#     cm = plt.get_cmap('gray')
-#     cm_hot = plt.get_cmap('inferno')  # copper
-#     zd, yd, xd = volume_array.shape
-#
-#     im = volume_array[from_slice:to_slice, yd // 2, :]
-#     im = np.uint8(cm(im) * 255)
-#
-#     im = Image.fromarray(im).convert('RGB')
-#     im = im.resize((150, 150))
-#     # im = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
-#     # im = Image.fromarray(im).convert('RGB')
-#     # imgs.append(im.resize((150, 150)))
-#     st.image(im)
+    def __display_partial_volume(self, from_slice, to_slice):
+
+        cm = plt.get_cmap('gray')
+        yd = self.original_array.shape[1]
+        frontal_slice_original = self.original_array[:, yd // 2, :]
+        frontal_slice_lungmask = self.lung_seg_array[:, yd // 2, :]
+
+        mskmax = frontal_slice_original[frontal_slice_lungmask > 0].max()
+        mskmin = frontal_slice_original[frontal_slice_lungmask > 0].min()
+        im_arr = (frontal_slice_original[:, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
+        im_arr = np.uint8(cm(im_arr) * 255)
+        im = Image.fromarray(im_arr).convert('RGB')
+
+        im.paste((0, 0, 0), box=(0, 0, im.size[0], from_slice))
+        im.paste((0, 0, 0, 120), box=(0, to_slice, im.size[0], im.size[1]))
+
+        im = im.resize((250, 250))
+
+        st.image(im)
