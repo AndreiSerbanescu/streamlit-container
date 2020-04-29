@@ -214,7 +214,8 @@ def ct_muscle_segment(source_file):
 
 # PRE: original array and lung segmentation not None
 # rest can be None
-def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
+def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=None, detection_array=None,
+                                         attention_array=None, fat_report_cm3=None):
 
     assert original_array is not None
     assert lung_seg is not None
@@ -224,7 +225,7 @@ def display_volume_and_slice_information(original_array, lung_seg, muscle_seg, d
     if fat_report_cm3 is not None:
         display_fat_report(fat_report_cm3)
 
-    __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3)
+    __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3)
 
 def display_lungmask_segmentation(original_array, segmentation_array):
 
@@ -247,7 +248,7 @@ def display_lungmask_segmentation(original_array, segmentation_array):
                         [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
 
-def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, fat_report_cm3):
+def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3):
 
 
     if muscle_seg is not None:
@@ -272,6 +273,11 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
         detection_imgs = get_slices_from_volume(detection_array, lung_seg)
         tuple_imgs.append(detection_imgs)
         captions.append("Detection Boxes")
+
+    if attention_array is not None:
+        attention_imgs = get_slices_from_volume(attention_array, lung_seg)
+        tuple_imgs.append(attention_imgs)
+        captions.append("Attention")
 
     tuple_imgs = tuple(tuple_imgs)
 
@@ -503,23 +509,23 @@ def debug_display_button():
         lesion_attention_array = None
 
         if CT_FAT_REPORT in workers_selected:
-            fat_report = read_csv('/app/source/fat_report_converted_case001.txt')
+            fat_report = read_csv('/app/source/all_outputs/fat_report_converted_case001.txt')
             fat_report_cm3 = convert_report_to_cm3(fat_report)
 
         if CT_MUSCLE_SEGMENTATION in workers_selected:
-            muscle_seg = sitk.ReadImage('/app/source/muscle_segment_converted_case001.nii.gz')
+            muscle_seg = sitk.ReadImage('/app/source/all_outputs/muscle_segment_converted_case001.nii.gz')
             muscle_array = sitk.GetArrayFromImage(muscle_seg)
 
         if LESION_DETECTION in workers_selected:
-            lesion_detect = sitk.ReadImage('/app/source/detection_input.nii.gz')
+            lesion_detect = sitk.ReadImage('/app/source/all_outputs/detection_converted-case001.nii.gz')
             lesion_detect_array = sitk.GetArrayFromImage(lesion_detect)
 
         if LESION_DETECTION_SEG in workers_selected:
-            lesion_attention = sitk.ReadImage('/app/source/attention_input.nii.gz')
-            lesion_attention_array = sitk.GetArrayFromImage(lesion_detect)
+            lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
+            lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
-        display_volume_and_slice_information(volume_array, lungmask_array, muscle_array,
-                                             lesion_detect_array, fat_report_cm3)
+        display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
+                                             lesion_attention_array, fat_report_cm3)
 
 def worker_selection():
     # TODO removing hardcoing of available containers
