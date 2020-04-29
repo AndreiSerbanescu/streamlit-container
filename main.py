@@ -14,6 +14,7 @@ from functools import reduce
 import operator
 from workers.nifti_reader import read_nifti_image
 from concurrent.futures import ThreadPoolExecutor
+import statsmodels.stats.api as sms
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -100,10 +101,7 @@ def convert_report_to_cm3(fat_report):
 
     return fat_report_cm3
 
-def display_fat_report(fat_report):
-
-    # if fat_report is None:
-    #     return
+def display_fat_report(fat_report, fat_interval=None):
 
     paper_citation = "**Fat Measurement by:** Summers RM, Liu J, Sussman DL, Dwyer AJ, Rehani B, Pickhardt PJ, Choi JR, Yao J. Association " \
                      "Between Visceral Adiposity and Colorectal Polyps on CT Colonography. AJR 199:48–57 (2012)."\
@@ -130,11 +128,27 @@ def display_fat_report(fat_report):
     st.markdown("**Lower third tissue information**")
     __display_agg_fat_report_info(sat_vols, vat_vols, len(sat_vols) * 2 // 3, len(sat_vols))
 
-    from_slice = 100
-    to_slice = 230
+    if fat_interval is not None:
+        top, bottom = fat_interval
 
-    st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
-    __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice)
+        report_len = len(fat_report)
+        from_slice = int(top * report_len / 100)
+        to_slice   = int(bottom * report_len / 100)
+
+        st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
+        __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice)
+
+    __display_fat_report_confidence_interval(sat_vols, vat_vols, 0, len(sat_vols))
+
+def get_all_fat_volumes_used():
+    pass
+
+def __display_fat_report_confidence_interval(sat_vols, vat_vovls, from_slice, to_slice):
+    # from_slice inclusive
+    # to_slice exclusive
+    # TODO implement
+    pass
+    # sms.DescrStatsW(a).tconfint_mean()
 
 def __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice):
     # from_slice inclusive
@@ -215,7 +229,7 @@ def ct_muscle_segment(source_file):
 # PRE: original array and lung segmentation not None
 # rest can be None
 def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=None, detection_array=None,
-                                         attention_array=None, fat_report_cm3=None):
+                                         attention_array=None, fat_report_cm3=None, fat_interval=None):
 
     assert original_array is not None
     assert lung_seg is not None
@@ -223,7 +237,7 @@ def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=No
     display_lungmask_segmentation(original_array, lung_seg)
 
     if fat_report_cm3 is not None:
-        display_fat_report(fat_report_cm3)
+        display_fat_report(fat_report_cm3, fat_interval=fat_interval)
 
     __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3)
 
@@ -390,7 +404,7 @@ def read_csv(filepath):
 
         return dict_rows
 
-def start_download_and_analyse(source_dir, workers_selected):
+def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
     if len(workers_selected) == 0:
         st.markdown("**Need to select at least one container**")
@@ -439,7 +453,7 @@ def start_download_and_analyse(source_dir, workers_selected):
     fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
 
     display_volume_and_slice_information(volume_array, lungmask_array, muscle_mask_array,
-                                         detection_volume_array, fat_report_cm3)
+                                         detection_volume_array, fat_report_cm3, fat_interval=fat_interval)
 
 def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
     if st.button('download and analyse'):
@@ -464,7 +478,7 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
 
 
 
-def download_and_analyse_button_upload(uploaded_file, workers_selected):
+def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=None):
 
     if st.button('download and analyse'):
         print(uploaded_file)
@@ -484,11 +498,11 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected):
 
         source_dir = os.path.split(filename)[1]
 
-        start_download_and_analyse(source_dir, workers_selected)
+        start_download_and_analyse(source_dir, workers_selected, fat_interval=fat_interval)
 
-    debug_display_button()
+    debug_display_button(workers_selected, fat_interval=fat_interval)
 
-def debug_display_button():
+def debug_display_button(workers_selected, fat_interval=None):
 
     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
         # TODO refactor
@@ -525,7 +539,7 @@ def debug_display_button():
             lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
         display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
-                                             lesion_attention_array, fat_report_cm3)
+                                             lesion_attention_array, fat_report_cm3, fat_interval=fat_interval)
 
 def worker_selection():
     # TODO removing hardcoing of available containers
@@ -636,7 +650,15 @@ if __name__ == "__main__":
         uploaded_file = st.file_uploader(label="", type=["nii.gz"])
 
         workers_selected = worker_selection()
-        download_and_analyse_button_upload(uploaded_file, workers_selected)
+
+        if CT_FAT_REPORT in workers_selected:
+            st.text("Select portion of lung CT to calculate the adipose tissue volumes")
+            st.text("From 0 (top of thorax) to 100 (bottom of thorax)")
+            fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
+
+            download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=fat_interval)
+        else:
+            download_and_analyse_button_upload(uploaded_file, workers_selected)
 
         ##### File Selector #####
 
