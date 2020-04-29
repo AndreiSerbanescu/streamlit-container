@@ -10,10 +10,9 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from plotter import generateHUplots
 import subprocess as sb
-from workers.nifti_reader import read_nifti_image
 from concurrent.futures import ThreadPoolExecutor
-import statsmodels.stats.api as sms
 from display.fat_report import FatReportDisplayer
+import csv
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -250,10 +249,8 @@ def move_files_to_shared_directory(source_dir):
     # TODO fix hardcoding
     return os.path.join(input, "files")
 
-# TODO delete this
 def read_csv(filepath):
 
-    import csv
     with open(filepath) as csv_file:
         lines = csv_file.readlines()
         # remove all whitespaces
@@ -291,9 +288,6 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         value_map[key] = value
 
     # TODO here source dir assumes its nifti
-
-    # TODO make sure source dir is not empty
-
     muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
     detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
     lungmask_array, volume_array = value_map.get(LUNGMASK_SEGMENT, (None, None))
@@ -332,8 +326,6 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
 
     if st.button('download and analyse'):
         print(uploaded_file)
-        # writing file to disk
-        # this is docker specific
         # TODO allow for .nii as well
 
         file_type = ".nii.gz"
@@ -355,12 +347,6 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
 def debug_display_button(workers_selected, fat_interval=None):
 
     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
-        # TODO refactor
-        LUNGMASK_SEGMENT = "Lungmask Segmentation"
-        CT_FAT_REPORT = "CT Fat Report"
-        CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
-        LESION_DETECTION = "Lesion Detection"
-        # LESION_DETECTION_SEG = "Lesion Detection Segmentation"
 
         volume = sitk.ReadImage('/app/source/all_outputs/input.nii.gz')
         volume_array = sitk.GetArrayFromImage(volume)
@@ -391,8 +377,6 @@ def debug_display_button(workers_selected, fat_interval=None):
                                              lesion_attention_array, fat_report, fat_interval=fat_interval)
 
 def worker_selection():
-    # TODO removing hardcoing of available containers
-    # TODO have better names
     worker_methods, worker_names = get_worker_information()
 
     worker_names.remove(LUNGMASK_SEGMENT)
@@ -406,8 +390,6 @@ def worker_selection():
 
 if __name__ == "__main__":
     print(sys.version)
-    #lung = Image.open("lung.png").resize((500, 500))
-    #seg = Image.open("seg.png").resize((500, 500))
 
     #### Page Header #####
     # st.title("CoCaCoLA - The Cool Calculator for Corona Lung Assessment")
