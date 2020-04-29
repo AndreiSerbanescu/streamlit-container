@@ -454,6 +454,10 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
         source_dir = move_files_to_shared_directory(download_dir)
         start_download_and_analyse(source_dir, workers_selected)
 
+    debug_display_button()
+
+
+
 def download_and_analyse_button_upload(uploaded_file, workers_selected):
 
     if st.button('download and analyse'):
@@ -475,6 +479,47 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected):
         source_dir = os.path.split(filename)[1]
 
         start_download_and_analyse(source_dir, workers_selected)
+
+    debug_display_button()
+
+def debug_display_button():
+
+    if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
+        # TODO refactor
+        LUNGMASK_SEGMENT = "Lungmask Segmentation"
+        CT_FAT_REPORT = "CT Fat Report"
+        CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
+        LESION_DETECTION = "Lesion Detection"
+        LESION_DETECTION_SEG = "Lesion Detection Segmentation"
+
+        volume = sitk.ReadImage('/app/source/all_outputs/input.nii.gz')
+        volume_array = sitk.GetArrayFromImage(volume)
+
+        lungmask_array = np.load('source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy')
+
+        fat_report_cm3 = None
+        muscle_array = None
+        lesion_detect_array = None
+        lesion_attention_array = None
+
+        if CT_FAT_REPORT in workers_selected:
+            fat_report = read_csv('/app/source/fat_report_converted_case001.txt')
+            fat_report_cm3 = convert_report_to_cm3(fat_report)
+
+        if CT_MUSCLE_SEGMENTATION in workers_selected:
+            muscle_seg = sitk.ReadImage('/app/source/muscle_segment_converted_case001.nii.gz')
+            muscle_array = sitk.GetArrayFromImage(muscle_seg)
+
+        if LESION_DETECTION in workers_selected:
+            lesion_detect = sitk.ReadImage('/app/source/detection_input.nii.gz')
+            lesion_detect_array = sitk.GetArrayFromImage(lesion_detect)
+
+        if LESION_DETECTION_SEG in workers_selected:
+            lesion_attention = sitk.ReadImage('/app/source/attention_input.nii.gz')
+            lesion_attention_array = sitk.GetArrayFromImage(lesion_detect)
+
+        display_volume_and_slice_information(volume_array, lungmask_array, muscle_array,
+                                             lesion_detect_array, fat_report_cm3)
 
 def worker_selection():
     # TODO removing hardcoing of available containers
