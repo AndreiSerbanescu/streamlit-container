@@ -34,13 +34,14 @@ class ContainerRequester:
 
         curr_time = time()
         finish_time = curr_time + wait_time
+        ready_path = os.path.join(data_share_path, "containers_ready", f"{hostname}_ready.txt")
 
         while curr_time < finish_time:
 
             print("Waiting for {} to start".format(hostname))
             # log_info("Waiting for {} to start".format(hostname))
 
-            if os.path.exists("{}/{}_ready.txt".format(data_share_path, hostname)):
+            if os.path.exists(ready_path):
                 # component ready
                 return True
 
