@@ -315,7 +315,7 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     display_volume_and_slice_information(volume_array, lungmask_array, muscle_mask_array,
                                          detection_volume_array, fat_report, fat_interval=fat_interval)
 
-def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
+def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=None):
     if st.button('download and analyse'):
         latest_iteration = st.empty()
 
@@ -334,7 +334,7 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
         source_dir = move_files_to_shared_directory(download_dir)
         start_download_and_analyse(source_dir, workers_selected)
 
-    debug_display_button()
+    debug_display_button(workers_selected, fat_interval=fat_interval)
 
 
 
@@ -459,6 +459,7 @@ if __name__ == "__main__":
     #this is behind a VPN so you need to connect your own XNAT
 
 
+    # TODO refactor this mess
     if st.checkbox("Toggle between xnat server and upload"):
         files_from_xnat_server = True
 
@@ -492,6 +493,15 @@ if __name__ == "__main__":
 
                 workers_selected = worker_selection()
                 download_and_analyse_button_xnat(subject_name, scan, workers_selected)
+
+                if CT_FAT_REPORT in workers_selected:
+                    st.text("Select portion of lung CT to calculate the adipose tissue volumes")
+                    st.text("From 0 (top of thorax) to 100 (bottom of thorax)")
+                    fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
+
+                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=fat_interval)
+                else:
+                    download_and_analyse_button_xnat(subject_name, scan, workers_selected)
 
         except Exception as e:
             xnat_working = False
