@@ -290,17 +290,7 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         value = future.result()
         value_map[key] = value
 
-    # TODO refactor
-    LUNGMASK_SEGMENT = "Lungmask Segmentation"
-    CT_FAT_REPORT = "CT Fat Report"
-    CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
-    LESION_DETECTION = "Lesion Detection"
-    LESION_DETECTION_SEG = "Lesion Detection Segmentation"
-
-
     # TODO here source dir assumes its nifti
-    # here source_dir assume
-    # TODO fix hardcoding
 
     # TODO make sure source dir is not empty
 
@@ -370,7 +360,7 @@ def debug_display_button(workers_selected, fat_interval=None):
         CT_FAT_REPORT = "CT Fat Report"
         CT_MUSCLE_SEGMENTATION = "CT Muscle Segmentation"
         LESION_DETECTION = "Lesion Detection"
-        LESION_DETECTION_SEG = "Lesion Detection Segmentation"
+        # LESION_DETECTION_SEG = "Lesion Detection Segmentation"
 
         volume = sitk.ReadImage('/app/source/all_outputs/input.nii.gz')
         volume_array = sitk.GetArrayFromImage(volume)
@@ -393,9 +383,9 @@ def debug_display_button(workers_selected, fat_interval=None):
             lesion_detect = sitk.ReadImage('/app/source/all_outputs/detection_converted-case001.nii.gz')
             lesion_detect_array = sitk.GetArrayFromImage(lesion_detect)
 
-        if LESION_DETECTION_SEG in workers_selected:
-            lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
-            lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
+        # if LESION_DETECTION_SEG in workers_selected:
+        #     lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
+        #     lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
         display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
                                              lesion_attention_array, fat_report, fat_interval=fat_interval)
