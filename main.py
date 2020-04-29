@@ -10,11 +10,10 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from plotter import generateHUplots
 import subprocess as sb
-from functools import reduce
-import operator
 from workers.nifti_reader import read_nifti_image
 from concurrent.futures import ThreadPoolExecutor
 import statsmodels.stats.api as sms
+from display.fat_report import FatReportDisplayer
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -68,152 +67,6 @@ def ct_fat_report(source_file):
     else:
         return segmenter.ct_fat_measure_dcm(source_file)
 
-def convert_report_to_cm3(fat_report):
-
-    last_row = fat_report[-1]
-    fat_report = fat_report[:len(fat_report) - 1]
-
-    visceral_tissue = 0
-    subcutaneous_tissue = 0
-    for row in fat_report:
-        visceral_tissue += float(row['vatVol'])
-        subcutaneous_tissue += float(row['satVol'])
-
-    total_in_cm3 = float(last_row["tatVol"])
-    total = visceral_tissue + subcutaneous_tissue
-
-    ratio = total_in_cm3 / total
-
-    fat_report_cm3 = []
-    for row in fat_report:
-        visceral_tissue = float(row['vatVol'])
-        subcutaneous_tissue = float(row['satVol'])
-
-        visc_tissue_cm3 = ratio * visceral_tissue
-        subcut_tissue_cm3 = ratio * subcutaneous_tissue
-
-        row_dict_cm3 = {
-            'vatVol': visc_tissue_cm3,
-            'satVol': subcut_tissue_cm3
-        }
-
-        fat_report_cm3.append(row_dict_cm3)
-
-    return fat_report_cm3
-
-def display_fat_report(fat_report, fat_interval=None):
-
-    paper_citation = "**Fat Measurement by:** Summers RM, Liu J, Sussman DL, Dwyer AJ, Rehani B, Pickhardt PJ, Choi JR, Yao J. Association " \
-                     "Between Visceral Adiposity and Colorectal Polyps on CT Colonography. AJR 199:48–57 (2012)."\
-                     "Ryckman EM, Summers RM, Liu J, Del Rio AM, Pickhardt PJ. Visceral fat quantification in asymptomatic " \
-                     "adults using abdominal CT: is it predictive of future cardiac events? Abdom Imaging 40:222–225 (2015)."\
-                     "Liu J, Pattanaik S, Yao J, Dwyer AJ, Pickhardt PJ, Choi JR, Summers RM. Associations among Pericolonic Fat, Visceral Fat, " \
-                     "and Colorectal Polyps on CT Colonography. Obesity 23:470-476 (2015)."\
-                     "Lee SJ, Liu J, Yao J, Kanarek A, Summers RM, Pickhardt PJ. Fully Automated Segmentation" \
-                     " and Quantification of Visceral and Subcutaneous Fat at Abdominal CT: Application to a " \
-                     "longitudinal adult screening cohort. Br J Radiol 91(1089):20170968 (2018)"
-
-    st.markdown(paper_citation)
-    st.markdown('**Fat Report**')
-
-    sat_vols = [elem['satVol'] for elem in fat_report]
-    vat_vols = [elem['vatVol'] for elem in fat_report]
-
-    st.markdown("**Total fat tissue information**")
-    __display_agg_fat_report_info(sat_vols, vat_vols, 0, len(sat_vols))
-
-    st.markdown("**Lower half tissue information**")
-    __display_agg_fat_report_info(sat_vols, vat_vols, len(sat_vols) // 2, len(sat_vols))
-
-    st.markdown("**Lower third tissue information**")
-    __display_agg_fat_report_info(sat_vols, vat_vols, len(sat_vols) * 2 // 3, len(sat_vols))
-
-    if fat_interval is not None:
-        top, bottom = fat_interval
-
-        report_len = len(fat_report)
-        from_slice = int(top * report_len / 100)
-        to_slice   = int(bottom * report_len / 100)
-
-        st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
-        __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice)
-
-    __display_fat_report_confidence_interval(sat_vols, vat_vols, 0, len(sat_vols))
-
-def get_all_fat_volumes_used():
-    pass
-
-def __display_fat_report_confidence_interval(sat_vols, vat_vovls, from_slice, to_slice):
-    # from_slice inclusive
-    # to_slice exclusive
-    # TODO implement
-    pass
-    # sms.DescrStatsW(a).tconfint_mean()
-
-def __display_agg_fat_report_info(sat_vols, vat_vols, from_slice, to_slice):
-    # from_slice inclusive
-    # to_slice exclusive
-
-    partial_sats = sat_vols[from_slice:to_slice]
-    partial_vats = vat_vols[from_slice:to_slice]
-
-    sat_tissue_cm3 = reduce(operator.add, partial_sats)
-    vat_tissue_cm3 = reduce(operator.add, partial_vats)
-
-    st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
-    st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
-    st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
-
-
-def __display_partial_volume(volume, from_slice, to_slice):
-
-    volume_array = sitk.GetArrayFromImage(volume)
-
-    cm = plt.get_cmap('gray')
-    cm_hot = plt.get_cmap('inferno')  # copper
-    zd, yd, xd = volume_array.shape
-
-    im = volume_array[from_slice:to_slice, yd // 2, :]
-    im = np.uint8(cm(im) * 255)
-
-    im = Image.fromarray(im).convert('RGB')
-    im = im.resize((150, 150))
-    # im = np.uint8(cm_hot(segmentation_array[i, :, :].astype(float) / num_labels) * 255)
-    # im = Image.fromarray(im).convert('RGB')
-    # imgs.append(im.resize((150, 150)))
-    st.image(im)
-
-# TODO here we assume (from observation)
-# the last row shows the true volume in cm cubed
-def __display_fat_report(report, last_row):
-    visceral_tissue = 0
-    subcutaneous_tissue = 0
-    sanity_check_total = 0
-    for row in report:
-        visceral_tissue += float(row['vatVol'])
-        subcutaneous_tissue += float(row['satVol'])
-        sanity_check_total += float(row['tatVol'])
-
-    total_in_cm3 = float(last_row["tatVol"])
-
-    visceral_tissue, subcutaneous_tissue = transform_in_cm3(visceral_tissue, subcutaneous_tissue, total_in_cm3)
-    total_tissue = visceral_tissue + subcutaneous_tissue
-    visceral_ratio = visceral_tissue / total_tissue
-    subcut_ratio = subcutaneous_tissue / total_tissue
-    visc_to_subcut_ratio = visceral_tissue / subcutaneous_tissue
-
-    st.text(f"visceral to subcutaneous ratio {visc_to_subcut_ratio}")
-    st.text(f"visceral ratio {visceral_ratio}")
-    st.text(f"subcutaneous ratio {subcut_ratio}")
-
-def transform_in_cm3(visceral_tissue, subcutaneous_tissue, total_in_cm3):
-    total = visceral_tissue + subcutaneous_tissue
-
-    ratio = total_in_cm3 / total
-
-    visceral_in_cm3 = ratio * visceral_tissue
-    subcutaneous_in_cm3 = ratio * subcutaneous_tissue
-    return visceral_in_cm3, subcutaneous_in_cm3
 
 def ct_muscle_segment(source_file):
     print("ct muscle segment called with", source_file)
@@ -226,18 +79,21 @@ def ct_muscle_segment(source_file):
     return muscle_segmentation
 
 
-# PRE: original array and lung segmentation not None
-# rest can be None
 def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=None, detection_array=None,
-                                         attention_array=None, fat_report_cm3=None, fat_interval=None):
+                                         attention_array=None, fat_report=None, fat_interval=None):
 
     assert original_array is not None
     assert lung_seg is not None
 
     display_lungmask_segmentation(original_array, lung_seg)
 
-    if fat_report_cm3 is not None:
-        display_fat_report(fat_report_cm3, fat_interval=fat_interval)
+    fat_report_cm3 = None
+
+    if fat_report is not None:
+        # display_fat_report(fat_report_cm3, fat_interval=fat_interval)
+        fat_report_displayer = FatReportDisplayer(original_array, lung_seg, fat_report, fat_interval=fat_interval)
+        fat_report_displayer.display()
+        fat_report_cm3 = fat_report_displayer.get_converted_report()
 
     __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3)
 
@@ -266,9 +122,15 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
 
 
     if muscle_seg is not None:
-        muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine Learning Algorithm to Estimate Sarcopenia on Abdominal CT. Academic Radiology 27:311–320 (2020)."\
-                          "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Segmentation and Quantification at Abdominal CT: Application to a longitudinal adult screening cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
-                          "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks. Scientific Reports (2019) 9:16884."
+        muscle_citation = "**Muscle Segmentation by:** Burns JE, Yao J, Chalhoub D, Chen JJ, Summers RM. A Machine" \
+                          " Learning Algorithm to Estimate Sarcopenia on Abdominal CT. " \
+                          "Academic Radiology 27:311–320 (2020)."\
+                          "Graffy P, Liu J, Pickhardt PJ, Burns JE, Yao J, Summers RM. Deep Learning-Based Muscle Se" \
+                          "gmentation and Quantification at Abdominal CT: Application to a longitudinal adult screen" \
+                          "ing cohort for sarcopenia assessment. Br J Radiol 92:20190327 (2019)."\
+                          "Sandfort V, Yan K, Pickhardt PJ, Summers RM. Data augmentation using generative" \
+                          " adversarial networks (CycleGAN) to improve generalizability in CT segmentation tasks" \
+                          ". Scientific Reports (2019) 9:16884."
 
         st.markdown(muscle_citation)
 
@@ -450,10 +312,8 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
     detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
 
-    fat_report_cm3 = convert_report_to_cm3(fat_report) if fat_report is not None else None
-
     display_volume_and_slice_information(volume_array, lungmask_array, muscle_mask_array,
-                                         detection_volume_array, fat_report_cm3, fat_interval=fat_interval)
+                                         detection_volume_array, fat_report, fat_interval=fat_interval)
 
 def download_and_analyse_button_xnat(subject_name, scan, workers_selected):
     if st.button('download and analyse'):
@@ -517,14 +377,13 @@ def debug_display_button(workers_selected, fat_interval=None):
 
         lungmask_array = np.load('source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy')
 
-        fat_report_cm3 = None
+        fat_report = None
         muscle_array = None
         lesion_detect_array = None
         lesion_attention_array = None
 
         if CT_FAT_REPORT in workers_selected:
             fat_report = read_csv('/app/source/all_outputs/fat_report_converted_case001.txt')
-            fat_report_cm3 = convert_report_to_cm3(fat_report)
 
         if CT_MUSCLE_SEGMENTATION in workers_selected:
             muscle_seg = sitk.ReadImage('/app/source/all_outputs/muscle_segment_converted_case001.nii.gz')
@@ -539,7 +398,7 @@ def debug_display_button(workers_selected, fat_interval=None):
             lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
         display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
-                                             lesion_attention_array, fat_report_cm3, fat_interval=fat_interval)
+                                             lesion_attention_array, fat_report, fat_interval=fat_interval)
 
 def worker_selection():
     # TODO removing hardcoing of available containers
