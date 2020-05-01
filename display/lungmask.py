@@ -2,12 +2,18 @@ import streamlit as st
 from plotter import generateHUplots
 import numpy as np
 import SimpleITK as sitk
+from workers.nifti_reader import *
 
 class LungmaskSegmentationDisplayer:
 
-    def __init__(self, original_array, segmentation_array):
-        self.original_array = original_array
-        self.segmentation_array = segmentation_array
+    def __init__(self, original_array_path, segmentation_array_path):
+        self.original_array_path = original_array_path
+        self.segmentation_array_path = segmentation_array_path
+
+        # TODO perhaps catch np exception
+
+        self.original_array     = np.load(original_array_path)
+        self.segmentation_array = np.load(segmentation_array_path)
 
 
     def display(self):
@@ -28,3 +34,7 @@ class LungmaskSegmentationDisplayer:
                             Helmut Prosch and Georg Langs. "Automatic lung segmentation in routine imaging \
                             is a data diversity problem, not a methodology problem". 1 2020, \
                             [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
+
+
+    def get_arrays(self):
+        return self.original_array, self.segmentation_array

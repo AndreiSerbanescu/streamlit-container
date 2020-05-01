@@ -81,14 +81,15 @@ def ct_muscle_segment(source_file):
     return muscle_segmentation
 
 
-def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=None, detection_array=None,
+def display_volume_and_slice_information(original_array_path, lung_seg_path, muscle_seg=None, detection_array=None,
                                          attention_array=None, fat_report=None, fat_interval=None):
 
-    assert original_array is not None
-    assert lung_seg is not None
+    assert original_array_path is not None
+    assert lung_seg_path is not None
 
-    lungmask_displayer = LungmaskSegmentationDisplayer(original_array, lung_seg)
+    lungmask_displayer = LungmaskSegmentationDisplayer(original_array_path, lung_seg_path)
     lungmask_displayer.display()
+    original_array, lung_seg = lungmask_displayer.get_arrays()
 
     fat_report_cm3 = None
 
@@ -213,7 +214,7 @@ def lesion_detect_seg(source_file):
 
 
 def lungmask_segment(source_dir):
-    segmentation, input_nda, spx, spy, spz = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
+    segmentation, input_nda = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
     return segmentation, input_nda
 
 def move_files_to_shared_directory(source_dir):
@@ -262,7 +263,7 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         for worker in workers_selected:
             method = worker_methods[worker]
 
-            future = executor.submit(method, source_dir)
+            future = executor.submit(method, source_dir, filepath_only=True)
             future_map[worker] = future
 
     value_map = {}
@@ -281,17 +282,17 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     # TODO here source dir assumes its nifti
     muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
     detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-    lungmask_array, volume_array = value_map.get(LUNGMASK_SEGMENT, (None, None))
+    lungmask_array_path, volume_array_path = value_map.get(LUNGMASK_SEGMENT, (None, None))
     fat_report = value_map.get(CT_FAT_REPORT, None)
 
     muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
     detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
 
-    if volume_array is None or lungmask_array is None:
+    if volume_array_path is None or volume_array_path is None:
         st.markdown("**Cannot display**")
         return
 
-    display_volume_and_slice_information(volume_array, lungmask_array, muscle_mask_array,
+    display_volume_and_slice_information(volume_array_path, lungmask_array_path, muscle_mask_array,
                                          detection_volume_array, fat_report, fat_interval=fat_interval)
 
 
@@ -346,14 +347,21 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
 
     debug_display_button(workers_selected, fat_interval=fat_interval)
 
+# TODO remove this
 def debug_display_button(workers_selected, fat_interval=None):
 
     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
 
-        volume = sitk.ReadImage('/app/source/all_outputs/input.nii.gz')
-        volume_array = sitk.GetArrayFromImage(volume)
 
-        lungmask_array = np.load('source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy')
+        # volume_path = '/app/source/all_outputs/input.nii.gz'
+        segmentation_path = '/app/source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy'
+
+        # volume = sitk.ReadImage(volume_path)
+
+        volume_nd_path = "/app/source/all_outputs/lungmask_for_streamlit-input-nda-1588003852.7941797.npy"
+        # volume_array = sitk.GetArrayFromImage(volume_nd_path)
+
+        lungmask_array = np.load(segmentation_path)
 
         fat_report = None
         muscle_array = None
@@ -377,7 +385,9 @@ def debug_display_button(workers_selected, fat_interval=None):
         #     lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
         #     lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
-        display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
+        # display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
+        #                                      lesion_attention_array, fat_report, fat_interval=fat_interval)
+        display_volume_and_slice_information(volume_nd_path, segmentation_path, muscle_array, lesion_detect_array,
                                              lesion_attention_array, fat_report, fat_interval=fat_interval)
 
 def worker_selection():

@@ -31,10 +31,9 @@ class LungmaskSegmenter:
         input_nda = sitk.GetArrayFromImage(input_image)
         print(input_nda.shape)
 
-        spx, spy, spz = input_image.GetSpacing()
         segmentation = lungmask.apply(input_image, model, force_cpu=False, batch_size=20, volume_postprocessing=False)
 
-        return segmentation, input_nda, spx, spy, spz
+        return segmentation, input_nda
 
     def __docker_segment(self, source_dir, model_name, filepath_only):
 
@@ -47,7 +46,6 @@ class LungmaskSegmenter:
 
         rel_seg_path       = response_dict["segmentation"]
         rel_input_nda_path = response_dict["input_nda"]
-        spx, spy, spz      = response_dict["spacing"]
 
         data_share = os.environ["DATA_SHARE_PATH"]
 
@@ -57,11 +55,11 @@ class LungmaskSegmenter:
         input_nda_path    = os.path.join(data_share, rel_input_nda_path)
 
         if filepath_only:
-            return segmentation_path, input_nda_path, spx, spy, spz
+            return segmentation_path, input_nda_path
 
         print("load np array from", segmentation_path)
         segmentation = np.load(segmentation_path)
         print("load np array from", input_nda_path)
         input_nda    = np.load(input_nda_path)
 
-        return segmentation, input_nda, spx, spy, spz
+        return segmentation, input_nda
