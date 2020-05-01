@@ -13,6 +13,7 @@ import subprocess as sb
 from concurrent.futures import ThreadPoolExecutor
 from display.fat_report import FatReportDisplayer
 import csv
+from exceptions.workers import *
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -284,8 +285,14 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     for key in future_map:
         future = future_map[key]
 
-        value = future.result()
-        value_map[key] = value
+        try:
+            value = future.result()
+            value_map[key] = value
+        except WorkerNotReadyException as e:
+            __display_worker_not_ready(e.worker_name)
+        except WorkerFailedException as e:
+            __display_worker_failed(e.worker_name)
+
 
     # TODO here source dir assumes its nifti
     muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
@@ -296,8 +303,19 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
     detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
 
+    if volume_array is None or lungmask_array is None:
+        st.markdown("**Cannot display**")
+        return
+
     display_volume_and_slice_information(volume_array, lungmask_array, muscle_mask_array,
                                          detection_volume_array, fat_report, fat_interval=fat_interval)
+
+
+def __display_worker_not_ready(hostname):
+    st.markdown(f"**{hostname} worker didn't start properly**")
+
+def __display_worker_failed(hostname):
+    st.markdown(f"**{hostname} worker failed**")
 
 def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=None):
     if st.button('download and analyse'):
@@ -477,10 +495,9 @@ if __name__ == "__main__":
                 else:
                     download_and_analyse_button_xnat(subject_name, scan, workers_selected)
 
-        except Exception as e:
+        except ConnectionError as e:
             xnat_working = False
             st.text(f"xnat server {xnat_address} not working")
-            print("xnat exception", e)
 
     else:
 

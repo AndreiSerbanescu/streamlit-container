@@ -2,6 +2,7 @@ import requests as req
 from time import time, sleep
 import os
 import json
+from exceptions.workers import *
 
 
 class ContainerRequester:
@@ -12,13 +13,20 @@ class ContainerRequester:
 
         if not ready:
             print("{} not ready".format(worker_hostname), flush=True)
-            raise Exception("{} not ready".format(worker_hostname))
+            raise WorkerNotReadyException(worker_hostname)
 
-        response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
+        try:
+            response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
+        except ConnectionError:
+            print(f"Worker {worker_hostname} didn't respond")
+            raise WorkerFailedException(worker_hostname)
+        except Exception as e:
+            print(F"Other {worker_hostname} exception {e}")
+            raise WorkerFailedException(worker_hostname)
 
         if response.status_code != 200:
             print("Got nonsuccessful response code")
-            return {}
+            raise WorkerFailedException(worker_hostname)
 
         print("Got response text", response.text)
         response_dict = json.loads(response.text)
