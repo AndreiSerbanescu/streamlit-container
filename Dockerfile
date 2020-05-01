@@ -33,3 +33,4 @@ COPY common/* /app/common/
 COPY workers /app/workers
 COPY container_requester.py /app/container_requester.py
 COPY exceptions /app/exceptions
+COPY display /app/display
