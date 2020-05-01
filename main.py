@@ -88,12 +88,14 @@ def display_volume_and_slice_information(original_array_path, lung_seg_path, mus
     assert lung_seg_path is not None
 
     lungmask_displayer = LungmaskSegmentationDisplayer(original_array_path, lung_seg_path)
-
-    lungmask_displayer.display()
     original_array, lung_seg = lungmask_displayer.get_arrays()
 
     # fat_report may be None, in which case fat_report_displayer doesn't display anything
     fat_report_displayer = FatReportDisplayer(original_array, lung_seg, fat_report, fat_interval=fat_interval)
+
+    lungmask_displayer.download_button()
+
+    lungmask_displayer.display()
     fat_report_displayer.display()
 
     # may be None
