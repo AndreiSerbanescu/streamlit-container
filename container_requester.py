@@ -17,11 +17,11 @@ class ContainerRequester:
 
         try:
             response = req.get('http://{}:{}/{}'.format(worker_hostname, worker_port, request_name), params=payload)
-        except ConnectionError:
+        except req.exceptions.ConnectionError:
             print(f"Worker {worker_hostname} didn't respond")
             raise WorkerFailedException(worker_hostname)
         except Exception as e:
-            print(F"Other {worker_hostname} exception {e}")
+            print(F"WARNING: Other {worker_hostname} exception {e}")
             raise WorkerFailedException(worker_hostname)
 
         if response.status_code != 200:

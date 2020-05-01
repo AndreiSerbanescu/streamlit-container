@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from display.fat_report import FatReportDisplayer
 import csv
 from exceptions.workers import *
+import requests
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -455,7 +456,6 @@ if __name__ == "__main__":
     if st.checkbox("Toggle between xnat server and upload"):
         files_from_xnat_server = True
 
-        xnat_working = True
         xnat_address = 'http://armada.doc.ic.ac.uk/xnat-web-1.7.6'
         xnat_user = "admin"
         xnat_password = "admin"
@@ -495,9 +495,10 @@ if __name__ == "__main__":
                 else:
                     download_and_analyse_button_xnat(subject_name, scan, workers_selected)
 
-        except ConnectionError as e:
-            xnat_working = False
+        except requests.exceptions.ConnectionError as e:
             st.text(f"xnat server {xnat_address} not working")
+            print(f"xnat exception {e} {type(e)}")
+
 
     else:
 
