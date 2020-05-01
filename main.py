@@ -367,7 +367,9 @@ def debug_display_button(workers_selected, fat_interval=None):
 
         if LESION_DETECTION in workers_selected:
             lesion_detect = sitk.ReadImage('/app/source/all_outputs/detection_converted-case001.nii.gz')
+            lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
             lesion_detect_array = sitk.GetArrayFromImage(lesion_detect)
+            lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
 
         # if LESION_DETECTION_SEG in workers_selected:
         #     lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
