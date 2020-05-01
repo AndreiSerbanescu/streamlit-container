@@ -12,6 +12,7 @@ from plotter import generateHUplots
 import subprocess as sb
 from concurrent.futures import ThreadPoolExecutor
 from display.fat_report import FatReportDisplayer
+from display.lungmask import LungmaskSegmentationDisplayer
 import csv
 from exceptions.workers import *
 import requests
@@ -86,7 +87,8 @@ def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=No
     assert original_array is not None
     assert lung_seg is not None
 
-    display_lungmask_segmentation(original_array, lung_seg)
+    lungmask_displayer = LungmaskSegmentationDisplayer(original_array, lung_seg)
+    lungmask_displayer.display()
 
     fat_report_cm3 = None
 
@@ -98,25 +100,6 @@ def display_volume_and_slice_information(original_array, lung_seg, muscle_seg=No
 
     __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3)
 
-def display_lungmask_segmentation(original_array, segmentation_array):
-
-    input_nifti = sitk.GetImageFromArray(original_array)
-    spx, spy, spz = input_nifti.GetSpacing()
-
-    st.header("HU distribution:")
-    generateHUplots.generateHUPlots(original_array, segmentation_array, 2)
-
-    right = np.count_nonzero(segmentation_array == 1) * spx * spy * spz
-    left = np.count_nonzero(segmentation_array == 2) * spx * spy * spz
-
-    st.header("Result:")
-    st.header(f'right lung: {right} mm\N{SUPERSCRIPT THREE}')
-    st.header(f'left lung: {left} mm\N{SUPERSCRIPT THREE}')
-
-    st.markdown('**Lung Segmentation by:** Johannes Hofmanninger, Forian Prayer, Jeanny Pan, Sebastian Röhrich, \
-                        Helmut Prosch and Georg Langs. "Automatic lung segmentation in routine imaging \
-                        is a data diversity problem, not a methodology problem". 1 2020, \
-                        [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
 
 def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3):
