@@ -7,7 +7,11 @@ from matplotlib import pyplot as plt
 
 class FatReportDisplayer:
 
-    def __init__(self, original_array, lung_seg_array, fat_report_csv, fat_interval=None):
+    def __init__(self, original_array, lung_seg_array, fat_report_csv=None, fat_interval=None):
+
+        if fat_report_csv is None:
+            self.fat_report = None
+            return
 
         self.original_array = original_array
         self.lung_seg_array = lung_seg_array
@@ -29,6 +33,9 @@ class FatReportDisplayer:
         self.vat_vols = [elem['vatVol'] for elem in self.fat_report]
 
     def display(self):
+
+        if self.fat_report is None:
+            return
 
         st.markdown(self.paper_citation)
         st.markdown('**Fat Report**')
