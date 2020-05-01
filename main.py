@@ -215,9 +215,9 @@ def lesion_detect_seg(source_file):
     return mask_volume, detection_volume
 
 
-def lungmask_segment(source_dir):
-    segmentation, input_nda = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb')
-    return segmentation, input_nda
+def lungmask_segment(source_dir, filepath_only=False):
+    segmentation, input = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb', filepath_only=filepath_only)
+    return segmentation, input
 
 def move_files_to_shared_directory(source_dir):
 
