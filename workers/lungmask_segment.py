@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import subprocess as sb
+from workers.nifti_reader import read_nifti_image
 
 class LungmaskSegmenter:
 
@@ -44,22 +45,25 @@ class LungmaskSegmenter:
                                                                         self.worker_port,
                                                                         self.segment_request_name)
 
-        rel_seg_path       = response_dict["segmentation"]
-        rel_input_nda_path = response_dict["input_nda"]
+        rel_seg_path   = response_dict["segmentation"]
+        rel_input_path = response_dict["input"]
 
         data_share = os.environ["DATA_SHARE_PATH"]
 
         # TODO delete volume files after reading them
 
         segmentation_path = os.path.join(data_share, rel_seg_path)
-        input_nda_path    = os.path.join(data_share, rel_input_nda_path)
+        input_path        = os.path.join(data_share, rel_input_path)
 
         if filepath_only:
-            return segmentation_path, input_nda_path
+            return segmentation_path, input_path
 
-        print("load np array from", segmentation_path)
-        segmentation = np.load(segmentation_path)
-        print("load np array from", input_nda_path)
-        input_nda    = np.load(input_nda_path)
 
-        return segmentation, input_nda
+        segmentation = read_nifti_image(segmentation_path)
+        input        = read_nifti_image(input_path)
+        # print("load np array from", segmentation_path)
+        # segmentation = np.load(segmentation_path)
+        # print("load np array from", input_nda_path)
+        # input_nda    = np.load(input_nda_path)
+
+        return segmentation, input
