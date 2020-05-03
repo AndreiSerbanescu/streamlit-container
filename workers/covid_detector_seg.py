@@ -43,7 +43,7 @@ class CovidDetectorSeg:
         if filepath_only:
             return mask_volume_path, detection_volume_path
 
-        attention_volume = nifti_reader.read_nifti_image(mask_volume_path)
+        mask_volume = nifti_reader.read_nifti_image(mask_volume_path)
         detection_volume = nifti_reader.read_nifti_image(detection_volume_path)
 
-        return attention_volume, detection_volume
+        return mask_volume, detection_volume

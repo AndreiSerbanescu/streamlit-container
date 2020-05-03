@@ -8,12 +8,11 @@ import SimpleITK as sitk
 import segmenter
 from pathlib import Path
 from matplotlib import pyplot as plt
-from plotter import generateHUplots
 import subprocess as sb
 from concurrent.futures import ThreadPoolExecutor
 from display.fat_report import FatReportDisplayer
 from display.lungmask import LungmaskSegmentationDisplayer
-import csv
+from workers.nifti_reader import read_nifti_image
 from exceptions.workers import *
 import requests
 
@@ -61,33 +60,34 @@ def get_worker_information():
 
     return worker_methods, worker_names
 
-def ct_fat_report(source_file):
+def ct_fat_report(source_file, filepath_only=False):
     print("ct fat report called with", source_file)
 
     if segmenter.is_nifti(source_file):
-        return segmenter.ct_fat_measure_nifti(source_file)
+        return segmenter.ct_fat_measure_nifti(source_file, filepath_only=filepath_only)
     else:
-        return segmenter.ct_fat_measure_dcm(source_file)
+        return segmenter.ct_fat_measure_dcm(source_file, filepath_only=filepath_only)
 
 
-def ct_muscle_segment(source_file):
+def ct_muscle_segment(source_file, filepath_only=False):
     print("ct muscle segment called with", source_file)
 
     if segmenter.is_nifti(source_file):
-        muscle_segmentation, original = segmenter.ct_muscle_segment_nifti(source_file)
+        muscle_segmentation, original = segmenter.ct_muscle_segment_nifti(source_file, filepath_only=False)
     else:
-        muscle_segmentation, original = segmenter.ct_muscle_segment_dcm(source_file)
+        muscle_segmentation, original = segmenter.ct_muscle_segment_dcm(source_file, filepath_only=False)
 
     return muscle_segmentation
 
 
-def display_volume_and_slice_information(original_array_path, lung_seg_path, muscle_seg=None, detection_array=None,
-                                         attention_array=None, fat_report=None, fat_interval=None):
+# TODO add lesion detection seg
+def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle_seg=None, lesion_detection=None,
+                                         lesion_attention=None, fat_report=None, fat_interval=None):
 
-    assert original_array_path is not None
+    assert input_nifti_path is not None
     assert lung_seg_path is not None
 
-    lungmask_displayer = LungmaskSegmentationDisplayer(original_array_path, lung_seg_path)
+    lungmask_displayer = LungmaskSegmentationDisplayer(input_nifti_path, lung_seg_path)
     original_array, lung_seg = lungmask_displayer.get_arrays()
 
     # fat_report may be None, in which case fat_report_displayer doesn't display anything
@@ -101,7 +101,24 @@ def display_volume_and_slice_information(original_array_path, lung_seg_path, mus
     # may be None
     fat_report_cm3 = fat_report_displayer.get_converted_report()
 
-    __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3)
+    detection_array = None
+    attention_array = None
+    muscle_seg_array = None
+    
+    if lesion_detection is not None:
+        detection_array = read_nifti_image(lesion_detection)
+        detection_array = sitk.GetArrayFromImage(detection_array)
+
+    if lesion_attention is not None:
+        attention_array = read_nifti_image(lesion_attention)
+        attention_array = sitk.GetArrayFromImage(attention_array)
+
+    if muscle_seg is not None:
+        muscle_seg_array = read_nifti_image(muscle_seg)
+        muscle_seg_array = sitk.GetArrayFromImage(muscle_seg_array)
+
+    __display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
+                               attention_array, fat_report_cm3)
 
 
 
@@ -192,25 +209,25 @@ def get_mask_slices_from_volume(mask_array):
 
     return imgs
 
-def lesion_detect(source_file):
+def lesion_detect(source_file, filepath_only=False):
     print("lesion detect called with", source_file)
 
     if segmenter.is_nifti(source_file):
-        attention_volume, detection_volume = segmenter.covid_detector_nifti(source_file)
+        attention_volume, detection_volume = segmenter.covid_detector_nifti(source_file, filepath_only=filepath_only)
     else:
-        attention_volume, detection_volume = segmenter.covid_detector_dcm(source_file)
+        attention_volume, detection_volume = segmenter.covid_detector_dcm(source_file, filepath_only=filepath_only)
 
 
     return attention_volume, detection_volume
 
 
-def lesion_detect_seg(source_file):
+def lesion_detect_seg(source_file, filepath_only=False):
     print("lesion detect seg called with", source_file)
 
     if segmenter.is_nifti(source_file):
-        mask_volume, detection_volume = segmenter.covid_detector_seg_nifti(source_file)
+        mask_volume, detection_volume = segmenter.covid_detector_seg_nifti(source_file, filepath_only=filepath_only)
     else:
-        mask_volume, detection_volume = segmenter.covid_detector_seg_dcm(source_file)
+        mask_volume, detection_volume = segmenter.covid_detector_seg_dcm(source_file, filepath_only=filepath_only)
 
     return mask_volume, detection_volume
 
@@ -236,20 +253,6 @@ def move_files_to_shared_directory(source_dir):
 
     # TODO fix hardcoding
     return os.path.join(input, "files")
-
-def read_csv(filepath):
-
-    with open(filepath) as csv_file:
-        lines = csv_file.readlines()
-        # remove all whitespaces
-        lines = [line.replace(' ', '') for line in lines]
-
-        csv_dict = csv.DictReader(lines)
-        dict_rows = []
-        for row in csv_dict:
-            dict_rows.append(row)
-
-        return dict_rows
 
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
@@ -281,22 +284,47 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
             __display_worker_failed(e.worker_name)
 
 
-    # TODO here source dir assumes its nifti
-    muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
-    detection_volume = value_map.get(LESION_DETECTION, (None, None))[1]
-    lungmask_array_path, volume_array_path = value_map.get(LUNGMASK_SEGMENT, (None, None))
-    fat_report = value_map.get(CT_FAT_REPORT, None)
+    # # TODO here source dir assumes its nifti
+    # muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
+    # detection_nifti_path = value_map.get(LESION_DETECTION, (None, None))[1]
 
-    muscle_mask_array = sitk.GetArrayFromImage(muscle_mask) if muscle_mask is not None else None
-    detection_volume_array = sitk.GetArrayFromImage(detection_volume) if detection_volume is not None else None
+    # fat_report_path = value_map.get(CT_FAT_REPORT, None)
 
-    if volume_array_path is None or volume_array_path is None:
+    lungmask_path = None
+    input_path = None
+    fat_report_path = None
+    muscle_seg_path = None
+    lesion_detection_path = None
+    lesion_attention_path = None
+    lesion_seg_mask_path = None
+    lesion_seg_detection_path = None
+
+    if LUNGMASK_SEGMENT in value_map:
+        lungmask_path, input_path = value_map[LUNGMASK_SEGMENT]
+
+    if CT_FAT_REPORT in value_map:
+        fat_report_path = value_map[CT_FAT_REPORT]
+
+    if CT_MUSCLE_SEGMENTATION in value_map:
+        muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
+
+    if LESION_DETECTION in value_map:
+        lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
+
+    if LESION_DETECTION_SEG in value_map:
+        lesion_seg_mask_path, lesion_seg_detection_path = value_map[LESION_DETECTION_SEG]
+
+
+    if input_path is None or lungmask_path is None:
         st.markdown("**Cannot display**")
+        st.markdown("**Lungmask segmentation failed**")
         return
 
-    display_volume_and_slice_information(volume_array_path, lungmask_array_path, muscle_mask_array,
-                                         detection_volume_array, fat_report, fat_interval=fat_interval)
-
+    display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
+                                         lesion_detection=lesion_detection_path,
+                                         lesion_attention=lesion_attention_path,
+                                         fat_report=fat_report_path,
+                                         fat_interval=fat_interval)
 
 def __display_worker_not_ready(hostname):
     st.markdown(f"**{hostname} worker didn't start properly**")
@@ -349,48 +377,37 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
 
     debug_display_button(workers_selected, fat_interval=fat_interval)
 
-# TODO remove this
 def debug_display_button(workers_selected, fat_interval=None):
 
     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
 
 
-        # volume_path = '/app/source/all_outputs/input.nii.gz'
-        segmentation_path = '/app/source/all_outputs/lungmask_for_streamlit-segmentation-1588003852.7941797.npy'
+        input_path = '/app/source/all_outputs/lungmask_input.nii.gz'
+        lungmask_path = '/app/source/all_outputs/lungmask_seg.nii.gz'
+        fat_report_path = None
+        muscle_seg_path = None
+        lesion_detection_path = None
+        lesion_attention_path = None
 
-        # volume = sitk.ReadImage(volume_path)
-
-        volume_nd_path = "/app/source/all_outputs/lungmask_for_streamlit-input-nda-1588003852.7941797.npy"
-        # volume_array = sitk.GetArrayFromImage(volume_nd_path)
-
-        lungmask_array = np.load(segmentation_path)
-
-        fat_report = None
-        muscle_array = None
-        lesion_detect_array = None
-        lesion_attention_array = None
 
         if CT_FAT_REPORT in workers_selected:
-            fat_report = read_csv('/app/source/all_outputs/fat_report_converted_case001.txt')
+            fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
 
         if CT_MUSCLE_SEGMENTATION in workers_selected:
-            muscle_seg = sitk.ReadImage('/app/source/all_outputs/muscle_segment_converted_case001.nii.gz')
-            muscle_array = sitk.GetArrayFromImage(muscle_seg)
+            muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
 
         if LESION_DETECTION in workers_selected:
-            lesion_detect = sitk.ReadImage('/app/source/all_outputs/detection_converted-case001.nii.gz')
-            lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
-            lesion_detect_array = sitk.GetArrayFromImage(lesion_detect)
-            lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
+            lesion_detection_path = '/app/source/all_outputs/detection_converted-case001.nii.gz'
+            lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
 
-        # if LESION_DETECTION_SEG in workers_selected:
-        #     lesion_attention = sitk.ReadImage('/app/source/all_outputs/attention_converted-case001.nii.gz')
-        #     lesion_attention_array = sitk.GetArrayFromImage(lesion_attention)
+        if LESION_DETECTION_SEG in workers_selected:
+            pass
 
-        # display_volume_and_slice_information(volume_array, lungmask_array, muscle_array, lesion_detect_array,
-        #                                      lesion_attention_array, fat_report, fat_interval=fat_interval)
-        display_volume_and_slice_information(volume_nd_path, segmentation_path, muscle_array, lesion_detect_array,
-                                             lesion_attention_array, fat_report, fat_interval=fat_interval)
+        display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
+                                             lesion_detection = lesion_detection_path,
+                                             lesion_attention = lesion_attention_path,
+                                             fat_report = fat_report_path,
+                                             fat_interval = fat_interval)
 
 def worker_selection():
     worker_methods, worker_names = get_worker_information()

@@ -4,18 +4,20 @@ import operator
 import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
+import csv
 
 class FatReportDisplayer:
 
-    def __init__(self, original_array, lung_seg_array, fat_report_csv=None, fat_interval=None):
+    def __init__(self, original_array, lung_seg_array, fat_report_path=None, fat_interval=None):
 
-        if fat_report_csv is None:
+        if fat_report_path is None:
             self.fat_report = None
             return
 
         self.original_array = original_array
         self.lung_seg_array = lung_seg_array
-        self.fat_report = self.__convert_report_to_cm3(fat_report_csv)
+        self.fat_report_path = fat_report_path
+        self.fat_report = self.__read_and_convert_report_to_cm3()
         self.fat_interval = fat_interval
 
         self.paper_citation = "**Fat Measurement by:** Summers RM, Liu J, Sussman DL, Dwyer AJ, Rehani B, " \
@@ -89,7 +91,9 @@ class FatReportDisplayer:
         #TODO implement
         pass
 
-    def __convert_report_to_cm3(self, fat_report):
+    def __read_and_convert_report_to_cm3(self):
+
+        fat_report = self.__read_csv(self.fat_report_path)
 
         last_row = fat_report[-1]
         fat_report = fat_report[:len(fat_report) - 1]
@@ -121,6 +125,20 @@ class FatReportDisplayer:
             fat_report_cm3.append(row_dict_cm3)
 
         return fat_report_cm3
+
+    def __read_csv(self, filepath):
+
+        with open(filepath) as csv_file:
+            lines = csv_file.readlines()
+            # remove all whitespaces
+            lines = [line.replace(' ', '') for line in lines]
+
+            csv_dict = csv.DictReader(lines)
+            dict_rows = []
+            for row in csv_dict:
+                dict_rows.append(row)
+
+            return dict_rows
 
     def __display_partial_volume(self, from_slice, to_slice):
 
