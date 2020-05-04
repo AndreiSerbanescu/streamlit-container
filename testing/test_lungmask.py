@@ -1,6 +1,7 @@
 import os
 from segmenter import lungmask_segment
 import shutil
+from exceptions.workers import WorkerFailedException
 
 if __name__ == "__main__":
 
@@ -45,7 +46,10 @@ if __name__ == "__main__":
 
         os.makedirs(subject_testing_output, exist_ok=True)
 
-        rel_seg_path, rel_input_path = lungmask_segment(rel_subject_file, filepath_only=True)
-        full_seg_path = os.path.join(data_share, rel_seg_path)
+        try:
+            rel_seg_path, rel_input_path = lungmask_segment(rel_subject_file, filepath_only=True)
+            full_seg_path = os.path.join(data_share, rel_seg_path)
 
-        shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask.nii.gz"))
+            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask.nii.gz"))
+        except WorkerFailedException as e:
+            print(f"### EXCEPTION lungmask failed for {subject_name}")
