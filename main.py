@@ -117,8 +117,8 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
         muscle_seg_array = read_nifti_image(muscle_seg)
         muscle_seg_array = sitk.GetArrayFromImage(muscle_seg_array)
 
-    __display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
-                               attention_array, fat_report_cm3)
+    # __display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
+    #                            attention_array, fat_report_cm3)
 
 
 

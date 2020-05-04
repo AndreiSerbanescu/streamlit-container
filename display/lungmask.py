@@ -38,19 +38,27 @@ class LungmaskSegmentationDisplayer:
 
     def download_button(self):
 
-        if st.button("Download Input volume as Nifti"):
-            st.markdown(self.__get_original_volume_download_link(), unsafe_allow_html=True)
-            pass
+        pass
+        # if st.button("Download Input volume as Nifti"):
+        # st.markdown(self.__get_original_volume_download_link(), unsafe_allow_html=True)
 
-        if st.button("Download Segmentation nifti volume"):
-            pass
+        # if st.button("Download Segmentation nifti volume"):
+        # st.markdown(self.__get_segmentation_volume_download_link(), unsafe_allow_html=True)
 
     def get_arrays(self):
         return self.original_array, self.segmentation_array
 
     def __get_original_volume_download_link(self):
         # csv = df.to_csv(index=False)
-        # b64 = base64.b64encode(
-        #     csv.encode()
-        # ).decode()  # some strings <-> bytes conversions necessary here
-        return f'<a href="data:file/nii.gz" download="{self.original_nifti_path}">Download csv file</a>'
+        import pybase64
+        b64 = pybase64.b64encode(
+            self.original_nifti
+        ).decode()  # some strings <-> bytes conversions necessary here
+        
+        # href = f'<a href="data:file/csv;base64,{b64}">Download CSV File</a> (right-click and save as &lt;some_name&gt;.csv)'
+        # return f'<a href="data:file/nii.gz" download="{self.original_nifti}">Download Nifti volume</a>'
+        return f'<a href="data:file/nii.gz;{b64}">Download csv file</a>'
+
+    def __get_segmentation_volume_download_link(self):
+        # return f'<a href="data:file/nii.gz" download="{self.segmentation_nifti}">Download Nifti volume</a>'
+        return ''
