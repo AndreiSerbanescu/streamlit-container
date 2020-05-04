@@ -49,7 +49,7 @@ def test_nifti():
             rel_seg_path, rel_input_path = lungmask_segment(rel_subject_file, filepath_only=True)
             full_seg_path = os.path.join(data_share, rel_seg_path)
 
-            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask.nii.gz"))
+            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask_nifti.nii.gz"))
         except WorkerFailedException as e:
             print(f"### EXCEPTION lungmask failed for {subject_name}")
 
@@ -99,7 +99,7 @@ def test_dicom():
             rel_seg_path, rel_input_path = lungmask_segment(rel_subject_file, filepath_only=True)
             full_seg_path = os.path.join(data_share, rel_seg_path)
 
-            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask.nii.gz"))
+            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask_dicom.nii.gz"))
         except WorkerFailedException:
             print(f"### EXCEPTION lungmask failed for {subject_name}")
 
@@ -113,3 +113,5 @@ def __recursively_find_directory_with_dcm_files(directory):
 
 if __name__ == "__main__":
     test_dicom()
+    test_nifti()
+    
