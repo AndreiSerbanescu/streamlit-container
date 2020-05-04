@@ -45,11 +45,21 @@ def test_nifti():
 
         os.makedirs(subject_testing_output, exist_ok=True)
 
+        subject_shared_output_dir = os.path.join(subject_testing_output, "lungmask_nifti.nii.gz")
+       
+        shutil.copyfile(os.path.join(subfolder, "mask_Lung_L.nii.gz"), os.path.join(subject_testing_output, "ground_left.nii.gz"))
+        shutil.copyfile(os.path.join(subfolder, "mask_Lung_R.nii.gz"), os.path.join(subject_testing_output, "ground_right.nii.gz"))
+        shutil.copyfile(subject_file, os.path.join(subject_testing_output, "input.nii.gz"))
+        
+        if os.path.exists(subject_shared_output_dir):
+            print(f"### {subject_name} aleady computed - skipping")
+            continue
+
         try:
             rel_seg_path, rel_input_path = lungmask_segment(rel_subject_file, filepath_only=True)
             full_seg_path = os.path.join(data_share, rel_seg_path)
 
-            shutil.copyfile(full_seg_path, os.path.join(subject_testing_output, "lungmask_nifti.nii.gz"))
+            shutil.copyfile(full_seg_path, subject_shared_output_dir)
         except WorkerFailedException as e:
             print(f"### EXCEPTION lungmask failed for {subject_name}")
 
@@ -112,6 +122,6 @@ def __recursively_find_directory_with_dcm_files(directory):
 
 
 if __name__ == "__main__":
-    test_dicom()
+    #test_dicom()
     test_nifti()
     
