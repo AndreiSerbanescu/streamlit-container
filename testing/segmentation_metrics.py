@@ -27,8 +27,6 @@ def get_complete_set_of_dice_scores(seg_sitk, ground_left_sitk, ground_right_sit
     both_lungs_ground = np.bitwise_or(ground_left_np, ground_right_np)
     both_lungs_seg = np.where(seg_np == 2, 1, seg_np)
 
-    print("both lungs unique", np.unique(both_lungs_ground))
-
     both_lungs_dice_score = dice_score(both_lungs_seg, both_lungs_ground)
 
     return left_dice_score, right_dice_score, both_lungs_dice_score

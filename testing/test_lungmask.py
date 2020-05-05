@@ -136,7 +136,7 @@ def generate_iou_scores():
 
 def generate_metric_scores(metric, metric_name):
     dir = os.environ["TESTING_OUT_DIR"]
-    subfolders = [f.path for f in os.scandir(dir) if f.is_dir()]
+    subfolders = sorted([f.path for f in os.scandir(dir) if f.is_dir()])
     for subject in subfolders:
         __get_score_for_subject(metric, metric_name, subject)
 
