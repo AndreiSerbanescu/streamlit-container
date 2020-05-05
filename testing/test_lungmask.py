@@ -148,6 +148,7 @@ def __get_score_for_subject(metric, metric_name, subject):
 
     if os.path.exists(metric_score_filename):
         print(f"{metric_name} scores for {subject_name} already exists - skipping")
+        return
 
     print(f"starting {metric_name} computation for {subject_name}")
 
