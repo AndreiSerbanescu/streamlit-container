@@ -46,7 +46,7 @@ def get_complete_set_of_iou_scores(seg_sitk, ground_left_sitk, ground_right_sitk
     left_iou_score = intersection_over_union(ground_left_np, seg_left_np)
     right_iou_score = intersection_over_union(ground_right_np, seg_right_np)
 
-    both_lungs_ground = np.add(ground_left_np, ground_right_np)
+    both_lungs_ground = np.bitwise_or(ground_left_np, ground_right_np)
     both_lungs_seg = np.where(seg_np == 2, 1, seg_np)
 
     both_lungs_iou_score = intersection_over_union(both_lungs_ground, both_lungs_seg)
