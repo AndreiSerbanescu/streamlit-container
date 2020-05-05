@@ -5,6 +5,7 @@ from exceptions.workers import WorkerFailedException
 from testing.segmentation_metrics import get_complete_set_of_dice_scores, get_complete_set_of_iou_scores
 from workers.nifti_reader import read_nifti_image
 import json
+from threading import Thread
 
 def generate_lungmask_segmentations_with_ground_files():
     testing_dir = os.environ["NIFTI_TESTING_DIR"]
@@ -137,68 +138,66 @@ def generate_metric_scores(metric, metric_name):
     dir = os.environ["TESTING_OUT_DIR"]
     subfolders = [f.path for f in os.scandir(dir) if f.is_dir()]
     for subject in subfolders:
+        __get_score_for_subject(metric, metric_name, subject)
 
-        metric_score_filename = os.path.join(subject, f"{metric_name}_scores.json")
 
-        subject_name = os.path.split(subject)[1]
+def __get_score_for_subject(metric, metric_name, subject):
+    metric_score_filename = os.path.join(subject, f"{metric_name}_scores.json")
 
-        if os.path.exists(metric_score_filename):
-            print(f"{metric_name} scores for {subject_name} already exists - skipping")
+    subject_name = os.path.split(subject)[1]
 
-        print(f"starting {metric_name} computation for {subject_name}")
+    if os.path.exists(metric_score_filename):
+        print(f"{metric_name} scores for {subject_name} already exists - skipping")
 
-        ground_left_path = os.path.join(subject, "ground_left.nii.gz")
-        ground_right_path = os.path.join(subject, "ground_right.nii.gz")
+    print(f"starting {metric_name} computation for {subject_name}")
 
-        nifti_seg_path = os.path.join(subject, "lungmask_nifti.nii.gz")
-        dicom_seg_path = os.path.join(subject, "lungmask_dicom.nii.gz")
+    ground_left_path = os.path.join(subject, "ground_left.nii.gz")
+    ground_right_path = os.path.join(subject, "ground_right.nii.gz")
 
-        ground_left = read_nifti_image(ground_left_path)
-        ground_right = read_nifti_image(ground_right_path)
+    nifti_seg_path = os.path.join(subject, "lungmask_nifti.nii.gz")
+    dicom_seg_path = os.path.join(subject, "lungmask_dicom.nii.gz")
 
-        nifti_seg = read_nifti_image(nifti_seg_path)
-        dicom_seg = read_nifti_image(dicom_seg_path)
+    ground_left = read_nifti_image(ground_left_path)
+    ground_right = read_nifti_image(ground_right_path)
 
-        try:
-            left_nifti_score, right_nifti_score, both_nifti_score = metric(nifti_seg, ground_left, ground_right)
-            print("finished nifti")
-            left_dicom_score, right_dicom_score, both_dicom_score = metric(dicom_seg, ground_left, ground_right)
-            print("finished dicom")
+    nifti_seg = read_nifti_image(nifti_seg_path)
+    dicom_seg = read_nifti_image(dicom_seg_path)
 
-        except Exception as e:
-            print(f"### ERRROR: computation failed for {subject_name}")
-            print(f"### with exception {e}")
-            continue
+    try:
+        left_nifti_score, right_nifti_score, both_nifti_score = metric(nifti_seg, ground_left, ground_right)
+        print(f"{metric_name} finished nifti")
+        left_dicom_score, right_dicom_score, both_dicom_score = metric(dicom_seg, ground_left, ground_right)
+        print(f"{metric_name} finished dicom")
 
-        print("finished dicom")
+    except Exception as e:
+        print(f"### ERRROR: {metric_name} computation failed for {subject_name}")
+        print(f"### {metric_name}with exception {e}")
+        continue
 
-        mean_nifti_score = (left_nifti_score + right_nifti_score) / 2
-        mean_dicom_score = (left_dicom_score + right_dicom_score) / 2
+    mean_nifti_score = (left_nifti_score + right_nifti_score) / 2
+    mean_dicom_score = (left_dicom_score + right_dicom_score) / 2
 
-        nifti_dict = {
-            "left": left_nifti_score,
-            "right": right_nifti_score,
-            "mean": mean_nifti_score,
-            "full": both_nifti_score
-        }
+    nifti_dict = {
+        "left": left_nifti_score,
+        "right": right_nifti_score,
+        "mean": mean_nifti_score,
+        "full": both_nifti_score
+    }
 
-        dicom_dict = {
-            "left": left_dicom_score,
-            "right": right_dicom_score,
-            "mean": mean_dicom_score,
-            "full": both_dicom_score
-        }
+    dicom_dict = {
+        "left": left_dicom_score,
+        "right": right_dicom_score,
+        "mean": mean_dicom_score,
+        "full": both_dicom_score
+    }
 
-        json_dict = {
-            "nifti": nifti_dict,
-            "dicom": dicom_dict
-        }
+    json_dict = {
+        "nifti": nifti_dict,
+        "dicom": dicom_dict
+    }
 
-        with open(metric_score_filename, "w") as outfile:
-            json.dump(json_dict, outfile)
-
-        break
-
+    with open(metric_score_filename, "w") as outfile:
+        json.dump(json_dict, outfile)
 
 
 if __name__ == "__main__":
