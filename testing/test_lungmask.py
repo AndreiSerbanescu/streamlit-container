@@ -2,8 +2,11 @@ import os
 from segmenter import lungmask_segment
 import shutil
 from exceptions.workers import WorkerFailedException
+from testing.segmentation_metrics import get_complete_set_of_dice_scores, get_complete_set_of_iou_scores
+from workers.nifti_reader import read_nifti_image
+import json
 
-def test_nifti():
+def generate_lungmask_segmentations_with_ground_files():
     testing_dir = os.environ["NIFTI_TESTING_DIR"]
     testing_out_dir = os.environ["TESTING_OUT_DIR"]
 
@@ -47,8 +50,12 @@ def test_nifti():
 
         subject_shared_output_dir = os.path.join(subject_testing_output, "lungmask_nifti.nii.gz")
        
-        shutil.copyfile(os.path.join(subfolder, "mask_Lung_L.nii.gz"), os.path.join(subject_testing_output, "ground_left.nii.gz"))
-        shutil.copyfile(os.path.join(subfolder, "mask_Lung_R.nii.gz"), os.path.join(subject_testing_output, "ground_right.nii.gz"))
+        shutil.copyfile(os.path.join(subfolder, "mask_Lung_L.nii.gz"),
+                        os.path.join(subject_testing_output, "ground_left.nii.gz"))
+
+        shutil.copyfile(os.path.join(subfolder, "mask_Lung_R.nii.gz"),
+                        os.path.join(subject_testing_output, "ground_right.nii.gz"))
+
         shutil.copyfile(subject_file, os.path.join(subject_testing_output, "input.nii.gz"))
         
         if os.path.exists(subject_shared_output_dir):
@@ -63,7 +70,7 @@ def test_nifti():
         except WorkerFailedException as e:
             print(f"### EXCEPTION lungmask failed for {subject_name}")
 
-def test_dicom():
+def generate_dicom_segmentations():
     testing_dir = os.environ["DCM_TESTING_DIR"]
     testing_out_dir = os.environ["TESTING_OUT_DIR"]
 
@@ -120,8 +127,80 @@ def __recursively_find_directory_with_dcm_files(directory):
 
     return ""
 
+def generate_dice_scores():
+    generate_metric_scores(get_complete_set_of_dice_scores, "dice")
+
+def generate_iou_scores():
+    generate_metric_scores(get_complete_set_of_iou_scores, "iou")
+
+def generate_metric_scores(metric, metric_name):
+    dir = os.environ["TESTING_OUT_DIR"]
+    subfolders = [f.path for f in os.scandir(dir) if f.is_dir()]
+    for subject in subfolders:
+
+        metric_score_filename = os.path.join(subject, f"{metric_name}_scores.json")
+
+        subject_name = os.path.split(subject)[1]
+
+        if os.path.exists(metric_score_filename):
+            print(f"{metric_name} scores for {subject_name} already exists - skipping")
+
+        print(f"starting {metric_name} computation for {subject_name}")
+
+        ground_left_path = os.path.join(subject, "ground_left.nii.gz")
+        ground_right_path = os.path.join(subject, "ground_right.nii.gz")
+
+        nifti_seg_path = os.path.join(subject, "lungmask_nifti.nii.gz")
+        dicom_seg_path = os.path.join(subject, "lungmask_dicom.nii.gz")
+
+        ground_left = read_nifti_image(ground_left_path)
+        ground_right = read_nifti_image(ground_right_path)
+
+        nifti_seg = read_nifti_image(nifti_seg_path)
+        dicom_seg = read_nifti_image(dicom_seg_path)
+
+        try:
+            left_nifti_score, right_nifti_score, both_nifti_score = metric(nifti_seg, ground_left, ground_right)
+            print("finished nifti")
+            left_dicom_score, right_dicom_score, both_dicom_score = metric(dicom_seg, ground_left, ground_right)
+            print("finished dicom")
+
+        except Exception as e:
+            print(f"### ERRROR: computation failed for {subject_name}")
+            print(f"### with exception {e}")
+            continue
+
+        print("finished dicom")
+
+        mean_nifti_score = (left_nifti_score + right_nifti_score) / 2
+        mean_dicom_score = (left_dicom_score + right_dicom_score) / 2
+
+        nifti_dict = {
+            "left": left_nifti_score,
+            "right": right_nifti_score,
+            "mean": mean_nifti_score,
+            "full": both_nifti_score
+        }
+
+        dicom_dict = {
+            "left": left_dicom_score,
+            "right": right_dicom_score,
+            "mean": mean_dicom_score,
+            "full": both_dicom_score
+        }
+
+        json_dict = {
+            "nifti": nifti_dict,
+            "dicom": dicom_dict
+        }
+
+        with open(metric_score_filename, "w") as outfile:
+            json.dump(json_dict, outfile)
+
+        break
+
+
 
 if __name__ == "__main__":
-    #test_dicom()
-    test_nifti()
-    
+    generate_dice_scores()
+    generate_iou_scores()
