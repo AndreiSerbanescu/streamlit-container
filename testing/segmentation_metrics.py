@@ -24,8 +24,10 @@ def get_complete_set_of_dice_scores(seg_sitk, ground_left_sitk, ground_right_sit
     left_dice_score = dice_score(ground_left_np, seg_left_np)
     right_dice_score = dice_score(ground_right_np, seg_right_np)
 
-    both_lungs_ground = np.add(ground_left_np, ground_right_np)
+    both_lungs_ground = np.bitwise_or(ground_left_np, ground_right_np)
     both_lungs_seg = np.where(seg_np == 2, 1, seg_np)
+
+    print("both lungs unique", np.unique(both_lungs_ground))
 
     both_lungs_dice_score = dice_score(both_lungs_seg, both_lungs_ground)
 
@@ -57,7 +59,9 @@ if __name__ == "__main__":
     from workers.nifti_reader import read_nifti_image
     import os
 
-    base_dir = "/app/output/LCTSC-Test-S1-101/"
+
+
+    base_dir = "/app/output/LCTSC-Train-S1-006/"
     seg = read_nifti_image(os.path.join(base_dir, "lungmask_nifti.nii.gz"))
     ground_left = read_nifti_image(os.path.join(base_dir, "ground_left.nii.gz"))
     ground_right = read_nifti_image(os.path.join(base_dir, "ground_right.nii.gz"))
@@ -67,3 +71,8 @@ if __name__ == "__main__":
     print("left dice", left_dice)
     print("right dice", right_dice)
     print("both dice", full_dice)
+
+    # ### ERRROR: dice computation failed for LCTSC-Train-S1-006
+    # ### dicewith exception Target is multiclass but average='binary'. Please choose another average setting, one of [None, 'micro', 'macro', 'weighted'].
+    # ### ERRROR: dice computation failed for LCTSC-Train-S1-002
+    # ### dicewith exception Target is multiclass but average='binary'. Please choose another average setting, one of [None, 'micro', 'macro', 'weighted'].
