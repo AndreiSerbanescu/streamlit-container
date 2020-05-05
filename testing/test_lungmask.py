@@ -169,36 +169,34 @@ def __get_score_for_subject(metric, metric_name, subject):
         left_dicom_score, right_dicom_score, both_dicom_score = metric(dicom_seg, ground_left, ground_right)
         print(f"{metric_name} finished dicom")
 
+        mean_nifti_score = (left_nifti_score + right_nifti_score) / 2
+        mean_dicom_score = (left_dicom_score + right_dicom_score) / 2
+
+        nifti_dict = {
+            "left": left_nifti_score,
+            "right": right_nifti_score,
+            "mean": mean_nifti_score,
+            "full": both_nifti_score
+        }
+
+        dicom_dict = {
+            "left": left_dicom_score,
+            "right": right_dicom_score,
+            "mean": mean_dicom_score,
+            "full": both_dicom_score
+        }
+
+        json_dict = {
+            "nifti": nifti_dict,
+            "dicom": dicom_dict
+        }
+
+        with open(metric_score_filename, "w") as outfile:
+            json.dump(json_dict, outfile)
+
     except Exception as e:
         print(f"### ERRROR: {metric_name} computation failed for {subject_name}")
         print(f"### {metric_name}with exception {e}")
-        continue
-
-    mean_nifti_score = (left_nifti_score + right_nifti_score) / 2
-    mean_dicom_score = (left_dicom_score + right_dicom_score) / 2
-
-    nifti_dict = {
-        "left": left_nifti_score,
-        "right": right_nifti_score,
-        "mean": mean_nifti_score,
-        "full": both_nifti_score
-    }
-
-    dicom_dict = {
-        "left": left_dicom_score,
-        "right": right_dicom_score,
-        "mean": mean_dicom_score,
-        "full": both_dicom_score
-    }
-
-    json_dict = {
-        "nifti": nifti_dict,
-        "dicom": dicom_dict
-    }
-
-    with open(metric_score_filename, "w") as outfile:
-        json.dump(json_dict, outfile)
-
 
 if __name__ == "__main__":
     generate_dice_scores()
