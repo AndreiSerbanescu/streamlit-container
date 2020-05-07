@@ -82,7 +82,8 @@ def ct_muscle_segment(source_file, filepath_only=False):
 
 # TODO add lesion detection seg
 def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle_seg=None, lesion_detection=None,
-                                         lesion_attention=None, fat_report=None, fat_interval=None):
+                                         lesion_attention=None, lesion_detection_seg=None,
+                                         lesion_mask_seg=None,fat_report=None, fat_interval=None):
 
     assert input_nifti_path is not None
     assert lung_seg_path is not None
@@ -104,7 +105,10 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
     detection_array = None
     attention_array = None
     muscle_seg_array = None
-    
+    detection_seg_array = None
+    mask_seg_array = None
+
+
     if lesion_detection is not None:
         detection_array = read_nifti_image(lesion_detection)
         detection_array = sitk.GetArrayFromImage(detection_array)
@@ -117,12 +121,22 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
         muscle_seg_array = read_nifti_image(muscle_seg)
         muscle_seg_array = sitk.GetArrayFromImage(muscle_seg_array)
 
+    if lesion_detection_seg is not None:
+        detection_seg_array = read_nifti_image(lesion_detection_seg)
+        detection_seg_array = sitk.GetArrayFromImage(detection_seg_array)
+
+    if lesion_mask_seg is not None:
+        mask_seg_array = read_nifti_image(lesion_mask_seg)
+        mask_seg_array = sitk.GetArrayFromImage(mask_seg_array)
+
+
     __display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
-                               attention_array, fat_report_cm3)
+                               attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
 
 
 
-def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array, fat_report_cm3):
+def __display_information_rows(original_array, lung_seg, muscle_seg, detection_array, attention_array,
+                               detection_seg_array, mask_seg_array, fat_report_cm3):
 
 
     if muscle_seg is not None:
@@ -152,12 +166,22 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
     if detection_array is not None:
         detection_imgs = get_slices_from_volume(detection_array, lung_seg)
         tuple_imgs.append(detection_imgs)
-        captions.append("Detection Boxes")
+        captions.append("Lesion Detection - Detection Boxes")
 
     if attention_array is not None:
         attention_imgs = get_slices_from_volume(attention_array, lung_seg)
         tuple_imgs.append(attention_imgs)
-        captions.append("Attention")
+        captions.append("Lesion Detection - Attention")
+
+    if detection_seg_array is not None:
+        detection_seg_imgs = get_slices_from_volume(detection_seg_array, lung_seg)
+        tuple_imgs.append(detection_seg_imgs)
+        captions.append("Lesion Detection Segmentation - Detection Boxes")
+
+    if mask_seg_array is not None:
+        mask_seg_imgs = get_mask_slices_from_volume(mask_seg_array)
+        tuple_imgs.append(mask_seg_imgs)
+        captions.append("Lesion Detection Segmentation - Mask")
 
     tuple_imgs = tuple(tuple_imgs)
 
@@ -323,6 +347,8 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                          lesion_detection=lesion_detection_path,
                                          lesion_attention=lesion_attention_path,
+                                         lesion_detection_seg=lesion_seg_detection_path,
+                                         lesion_mask_seg=lesion_seg_mask_path,
                                          fat_report=fat_report_path,
                                          fat_interval=fat_interval)
 
