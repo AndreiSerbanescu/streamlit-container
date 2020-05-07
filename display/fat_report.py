@@ -156,6 +156,8 @@ class FatReportDisplayer:
         im.paste((0, 0, 0), box=(0, 0, im.size[0], from_slice))
         im.paste((0, 0, 0, 120), box=(0, to_slice, im.size[0], im.size[1]))
 
+        im = im.transpose(Image.FLIP_TOP_BOTTOM)
+
         im = im.resize((250, 250))
 
         st.image(im)

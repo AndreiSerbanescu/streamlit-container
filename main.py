@@ -404,10 +404,10 @@ def debug_display_button(workers_selected, fat_interval=None):
             pass
 
         display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
-                                             lesion_detection = lesion_detection_path,
-                                             lesion_attention = lesion_attention_path,
-                                             fat_report = fat_report_path,
-                                             fat_interval = fat_interval)
+                                             lesion_detection=lesion_detection_path,
+                                             lesion_attention=lesion_attention_path,
+                                             fat_report=fat_report_path,
+                                             fat_interval=fat_interval)
 
 def worker_selection():
     worker_methods, worker_names = get_worker_information()
