@@ -274,8 +274,17 @@ def move_files_to_shared_directory(source_dir):
     if exit_code == 1:
         raise Exception("Couldn't move input files from {} to {}".format(source_dir, abs_input_path))
 
-    # TODO fix hardcoding
     return os.path.join(input, "files")
+
+def move_file_to_fileserver_base_dir(filepath):
+
+    name = os.path.split(filepath)[1]
+    fileserver_base_dir = os.environ["FILESERVER_BASE_DIR"]
+
+    fs_out_filename = os.path.join(fileserver_base_dir, name)
+
+    os.rename(filepath, fs_out_filename)
+    return fs_out_filename
 
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
@@ -307,12 +316,6 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
             __display_worker_failed(e.worker_name)
 
 
-    # # TODO here source dir assumes its nifti
-    # muscle_mask = value_map.get(CT_MUSCLE_SEGMENTATION, None)
-    # detection_nifti_path = value_map.get(LESION_DETECTION, (None, None))[1]
-
-    # fat_report_path = value_map.get(CT_FAT_REPORT, None)
-
     lungmask_path = None
     input_path = None
     fat_report_path = None
@@ -324,18 +327,27 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
     if LUNGMASK_SEGMENT in value_map:
         lungmask_path, input_path = value_map[LUNGMASK_SEGMENT]
+        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path)
+        input_path = move_file_to_fileserver_base_dir(input_path)
+
 
     if CT_FAT_REPORT in value_map:
         fat_report_path = value_map[CT_FAT_REPORT]
+        fat_report_path = move_file_to_fileserver_base_dir(fat_report_path)
 
     if CT_MUSCLE_SEGMENTATION in value_map:
         muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
+        fat_report_path = move_file_to_fileserver_base_dir(muscle_seg_path)
 
     if LESION_DETECTION in value_map:
         lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
+        lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path)
+        lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path)
 
     if LESION_DETECTION_SEG in value_map:
         lesion_seg_mask_path, lesion_seg_detection_path = value_map[LESION_DETECTION_SEG]
+        lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path)
+        lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path)
 
 
     if input_path is None or lungmask_path is None:
