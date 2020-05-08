@@ -50,10 +50,10 @@ class FatReportDisplayer:
         self.__display_agg_info(0, fat_report_len)
 
         st.markdown("**Lower half tissue information**")
-        self.__display_agg_info(fat_report_len // 2, fat_report_len)
+        self.__display_agg_info(0, fat_report_len // 2)
 
         st.markdown("**Lower third tissue information**")
-        self.__display_agg_info(fat_report_len * 2 // 3, fat_report_len)
+        self.__display_agg_info(0, fat_report_len // 3)
 
         if self.fat_interval is not None:
             top, bottom = self.fat_interval

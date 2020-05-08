@@ -22,8 +22,6 @@ class LungmaskSegmentationDisplayer:
         st.header("HU distribution:")
         generateHUplots.generateHUPlots(self.original_array, self.segmentation_array, 2)
 
-        print("original volume spacing", spx, spy, spz)
-
         right = np.count_nonzero(self.segmentation_array == 1) * spx * spy * spz
         left = np.count_nonzero(self.segmentation_array == 2) * spx * spy * spz
 

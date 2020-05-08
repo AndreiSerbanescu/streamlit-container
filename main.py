@@ -80,7 +80,6 @@ def ct_muscle_segment(source_file, filepath_only=False):
     return muscle_segmentation
 
 
-# TODO add lesion detection seg
 def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle_seg=None, lesion_detection=None,
                                          lesion_attention=None, lesion_detection_seg=None,
                                          lesion_mask_seg=None,fat_report=None, fat_interval=None):
@@ -526,7 +525,7 @@ if __name__ == "__main__":
 
                 if CT_FAT_REPORT in workers_selected:
                     st.text("Select portion of lung CT to calculate the adipose tissue volumes")
-                    st.text("From 0 (top of thorax) to 100 (bottom of thorax)")
+                    st.text("From 0 (bottom of thorax) to 100 (top of thorax)")
                     fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
                     download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=fat_interval)
@@ -544,15 +543,13 @@ if __name__ == "__main__":
         ##### File Selector #####
         # TODO upload of several (DICOM) files needs the streamlit dev version, which is difficult to use
         st.header("Please Upload the Chest CT Nifti here")
-        # uploaded_file = st.file_uploader(label="", type=["nii", "nii.gz"])
-        # TODO allow nii as well
         uploaded_file = st.file_uploader(label="", type=["nii.gz"])
 
         workers_selected = worker_selection()
 
         if CT_FAT_REPORT in workers_selected:
             st.text("Select portion of lung CT to calculate the adipose tissue volumes")
-            st.text("From 0 (top of thorax) to 100 (bottom of thorax)")
+            st.text("From 0 (bottom of thorax) to 100 (top of thorax)")
             fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
             download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=fat_interval)
@@ -563,12 +560,4 @@ if __name__ == "__main__":
 
 
     ##### XNAT connection #####
-
-    ##### Output Area #####
-    #st.header("Result:")
-    #st.subheader("Probability of Covid-19 infection=96.5%")
-    #st.subheader("Covid-19 severity index: 1")
-
-    ##### Output Area #####
-    #st.image([lung, seg])
 
