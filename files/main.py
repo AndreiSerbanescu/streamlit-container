@@ -15,6 +15,7 @@ from display.lungmask import LungmaskSegmentationDisplayer
 from workers.nifti_reader import read_nifti_image
 from exceptions.workers import *
 import requests
+import shutil
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -283,7 +284,7 @@ def move_file_to_fileserver_base_dir(filepath):
 
     fs_out_filename = os.path.join(fileserver_base_dir, name)
 
-    os.rename(filepath, fs_out_filename)
+    shutil.move(filepath, fs_out_filename)
     return fs_out_filename
 
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
@@ -337,7 +338,7 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
     if CT_MUSCLE_SEGMENTATION in value_map:
         muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
-        fat_report_path = move_file_to_fileserver_base_dir(muscle_seg_path)
+        muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path)
 
     if LESION_DETECTION in value_map:
         lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
