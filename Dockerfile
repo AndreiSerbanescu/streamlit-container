@@ -21,16 +21,5 @@ RUN apt-get install -y locales && locale-gen en_US.UTF-8
 RUN apt-get install curl -y #debugging
 RUN apt-get install vim -y #debugging
 
-COPY main.py /app/main.py
-COPY segmenter.py /app/segmenter.py
-COPY plotter/__init__.py /app/plotter/__init__.py
-COPY plotter/generateHUplots.py /app/plotter/generateHUplots.py
-COPY lung.png /app/lung.png
-COPY seg.png /app/seg.png
-COPY develop.py /app/develop.py
-RUN mkdir /app/common
-COPY common/* /app/common/
-COPY workers /app/workers
-COPY container_requester.py /app/container_requester.py
-COPY exceptions /app/exceptions
-COPY display /app/display
+RUN mkdir /app/src
+COPY files/ /app/src/
