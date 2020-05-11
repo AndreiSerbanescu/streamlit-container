@@ -11,7 +11,7 @@ class FileServer:
         self.base_dir = base_dir
     def start(self):
         os.chdir(self.base_dir)
-        with socketserver.TCPServer(("", self.port), self.handler) as httpd:
+        with socketserver.ThreadingTCPServer(("", self.port), self.handler) as httpd:
             print(f"Started fileserver at localhost {self.port}")
             httpd.serve_forever()
 
