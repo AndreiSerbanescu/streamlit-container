@@ -332,10 +332,10 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         try:
             value = future.result()
             value_map[key] = value
-        except WorkerNotReadyException as e:
-            __display_worker_not_ready(e.worker_name)
-        except WorkerFailedException as e:
-            __display_worker_failed(e.worker_name)
+        except WorkerNotReadyException:
+            __display_worker_not_ready(key)
+        except WorkerFailedException:
+            __display_worker_failed(key)
 
 
     lungmask_path = None
