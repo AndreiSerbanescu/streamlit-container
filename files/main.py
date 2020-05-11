@@ -15,6 +15,7 @@ from display.lungmask import LungmaskSegmentationDisplayer
 from workers.nifti_reader import read_nifti_image
 from exceptions.workers import *
 import requests
+import shutil
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -259,7 +260,7 @@ def lungmask_segment(source_dir, filepath_only=False):
     segmentation, input = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb', filepath_only=filepath_only)
     return segmentation, input
 
-def move_files_to_shared_directory(source_dir):
+def copy_files_to_shared_directory(source_dir):
 
     data_share = os.environ["DATA_SHARE_PATH"]
     input = "streamlit_input"
@@ -276,14 +277,18 @@ def move_files_to_shared_directory(source_dir):
 
     return os.path.join(input, "files")
 
-def move_file_to_fileserver_base_dir(filepath):
+def move_file_to_fileserver_base_dir(filepath, copy_only=False):
 
     name = os.path.split(filepath)[1]
     fileserver_base_dir = os.environ["FILESERVER_BASE_DIR"]
 
     fs_out_filename = os.path.join(fileserver_base_dir, name)
 
-    os.rename(filepath, fs_out_filename)
+    if copy_only:
+        shutil.copyfile(filepath, fs_out_filename)
+    else:
+        os.rename(filepath, fs_out_filename)
+
     return fs_out_filename
 
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
@@ -337,7 +342,7 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
     if CT_MUSCLE_SEGMENTATION in value_map:
         muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
-        fat_report_path = move_file_to_fileserver_base_dir(muscle_seg_path)
+        muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path)
 
     if LESION_DETECTION in value_map:
         lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
@@ -385,7 +390,7 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_i
 
         st.text('Analysis progress...')
 
-        source_dir = move_files_to_shared_directory(download_dir)
+        source_dir = copy_files_to_shared_directory(download_dir)
         start_download_and_analyse(source_dir, workers_selected)
 
     debug_display_button(workers_selected, fat_interval=fat_interval)
@@ -396,8 +401,6 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
 
     if st.button('download and analyse'):
         print(uploaded_file)
-        # TODO allow for .nii as well
-
         file_type = ".nii.gz"
         filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + file_type)
 
@@ -426,16 +429,23 @@ def debug_display_button(workers_selected, fat_interval=None):
         lesion_detection_path = None
         lesion_attention_path = None
 
+        input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
+        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
 
         if CT_FAT_REPORT in workers_selected:
             fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
+            fat_report_path = move_file_to_fileserver_base_dir(fat_report_path, copy_only=True)
 
         if CT_MUSCLE_SEGMENTATION in workers_selected:
             muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
+            muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path, copy_only=True)
 
         if LESION_DETECTION in workers_selected:
             lesion_detection_path = '/app/source/all_outputs/detection_converted-case001.nii.gz'
             lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
+
+            lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path, copy_only=True)
+            lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path, copy_only=True)
 
         if LESION_DETECTION_SEG in workers_selected:
             pass
@@ -503,8 +513,6 @@ if __name__ == "__main__":
 
     # TODO refactor this mess
     if st.checkbox("Toggle between xnat server and upload"):
-        files_from_xnat_server = True
-
         xnat_address = 'http://armada.doc.ic.ac.uk/xnat-web-1.7.6'
         xnat_user = "admin"
         xnat_password = "admin"
@@ -550,10 +558,7 @@ if __name__ == "__main__":
 
 
     else:
-
-        files_from_xnat_server = False
         ##### File Selector #####
-        # TODO upload of several (DICOM) files needs the streamlit dev version, which is difficult to use
         st.header("Please Upload the Chest CT Nifti here")
         uploaded_file = st.file_uploader(label="", type=["nii.gz"])
 

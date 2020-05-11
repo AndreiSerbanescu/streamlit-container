@@ -3,6 +3,7 @@ from plotter import generateHUplots
 import numpy as np
 import SimpleITK as sitk
 from workers.nifti_reader import *
+import os
 
 class LungmaskSegmentationDisplayer:
 
@@ -35,21 +36,21 @@ class LungmaskSegmentationDisplayer:
                             [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
     def download_button(self):
-
-        pass
-        # if st.button("Download Input volume as Nifti"):
-        # st.markdown(self.__get_original_volume_download_link(), unsafe_allow_html=True)
-
-        # if st.button("Download Segmentation nifti volume"):
-        # st.markdown(self.__get_segmentation_volume_download_link(), unsafe_allow_html=True)
+        st.markdown(self.__get_original_volume_download_link(), unsafe_allow_html=True)
+        st.markdown(self.__get_segmentation_volume_download_link(), unsafe_allow_html=True)
 
     def get_arrays(self):
         return self.original_array, self.segmentation_array
 
     def __get_original_volume_download_link(self):
-        fs_port = os.environ["FILESERVER_PORT"]
-        return f'localhost:{fs_port}/{original_resource_name}'
+        file_server_port = os.environ["FILESERVER_PORT"]
+        resource_name = os.path.split(self.original_path)[1]
+        file_server_url = f"http://127.0.0.1:{file_server_port}/{resource_name}"
+        return f'<a href="{file_server_url}" target="_blank" title="Original Nifti Volume">Download Original volume</a>'
 
     def __get_segmentation_volume_download_link(self):
-        # return f'<a href="data:file/nii.gz" download="{self.segmentation_nifti}">Download Nifti volume</a>'
-        return ''
+
+        file_server_port = os.environ["FILESERVER_PORT"]
+        resource_name = os.path.split(self.segmentation_path)[1]
+        file_server_url = f"http://127.0.0.1:{file_server_port}/{resource_name}"
+        return f'<a href="{file_server_url}" target="_blank" title="Segmentation Nifti Volume">Download Segmentation volume</a>'
