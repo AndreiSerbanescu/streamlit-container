@@ -287,8 +287,7 @@ def move_file_to_fileserver_base_dir(filepath, copy_only=False):
     if copy_only:
         shutil.copyfile(filepath, fs_out_filename)
     else:
-        os.rename(filepath, fs_out_filename)
-
+        shutil.move(filepath, fs_out_filename)
     return fs_out_filename
 
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
