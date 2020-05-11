@@ -142,7 +142,7 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
         mask_seg_array = sitk.GetArrayFromImage(mask_seg_array)
 
         mask_seg_download_displayer = DownloadDisplayer()
-        mask_seg_download_displayer.display(os.path.join(lesion_mask_seg)[1], "Lesion Detection Mask")
+        mask_seg_download_displayer.display(os.path.split(lesion_mask_seg)[1], "Lesion Detection Mask")
 
     lungmask_displayer.display()
     fat_report_displayer.display()
