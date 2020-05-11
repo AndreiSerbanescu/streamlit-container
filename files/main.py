@@ -219,7 +219,7 @@ def __display_information_rows(original_array, lung_seg, muscle_seg, detection_a
         img_tuple = all_imgs[idx]
 
         img_list = list(img_tuple)
-        st.image(img_list, caption=captions)
+        st.image(img_list, caption=captions, width=250)
 
 
 
@@ -421,7 +421,6 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_i
 def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=None):
 
     if st.button('download and analyse'):
-        print(uploaded_file)
         file_type = ".nii.gz"
         filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + file_type)
 
@@ -449,6 +448,9 @@ def debug_display_button(workers_selected, fat_interval=None):
         muscle_seg_path = None
         lesion_detection_path = None
         lesion_attention_path = None
+        lesion_seg_detection_path = None
+        lesion_seg_mask_path = None
+
 
         input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
         lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
@@ -477,11 +479,21 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                                      copy_only=True)
 
         if LESION_DETECTION_SEG in workers_selected:
-            pass
+            lesion_seg_detection_path = "/app/source/all_outputs/lesion_seg_detection.nii.gz"
+            lesion_seg_mask_path = "/app/source/all_outputs/lesion_seg_mask.nii.gz"
+
+            lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
+                                                                         download_name="lesion_seg_detection.nii.gz",
+                                                                         copy_only=True)
+            lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
+                                                                    download_name="lesion_seg_mask.nii.gz",
+                                                                    copy_only=True)
 
         display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                              lesion_detection=lesion_detection_path,
                                              lesion_attention=lesion_attention_path,
+                                             lesion_detection_seg=lesion_seg_detection_path,
+                                             lesion_mask_seg=lesion_seg_mask_path,
                                              fat_report=fat_report_path,
                                              fat_interval=fat_interval)
 
@@ -540,7 +552,6 @@ if __name__ == "__main__":
     #this is behind a VPN so you need to connect your own XNAT
 
 
-    # TODO refactor this mess
     if st.checkbox("Toggle between xnat server and upload"):
         xnat_address = 'http://armada.doc.ic.ac.uk/xnat-web-1.7.6'
         xnat_user = "admin"
