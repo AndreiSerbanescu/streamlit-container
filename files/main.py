@@ -16,6 +16,7 @@ from workers.nifti_reader import read_nifti_image
 from exceptions.workers import *
 import requests
 import shutil
+from display.download_button import DownloadDisplayer
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -95,9 +96,7 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
     fat_report_displayer = FatReportDisplayer(original_array, lung_seg, fat_report, fat_interval=fat_interval)
 
     lungmask_displayer.download_button()
-
-    lungmask_displayer.display()
-    fat_report_displayer.display()
+    fat_report_displayer.download_button()
 
     # may be None
     fat_report_cm3 = fat_report_displayer.get_converted_report()
@@ -113,22 +112,40 @@ def display_volume_and_slice_information(input_nifti_path, lung_seg_path, muscle
         detection_array = read_nifti_image(lesion_detection)
         detection_array = sitk.GetArrayFromImage(detection_array)
 
+        detection_download_displayer = DownloadDisplayer()
+        detection_download_displayer.display(os.path.split(lesion_detection)[1], "Lesion Detection Volume")
+
     if lesion_attention is not None:
         attention_array = read_nifti_image(lesion_attention)
         attention_array = sitk.GetArrayFromImage(attention_array)
+
+        attention_download_displayer = DownloadDisplayer()
+        attention_download_displayer.display(os.path.split(lesion_attention)[1], "Attention Volume")
 
     if muscle_seg is not None:
         muscle_seg_array = read_nifti_image(muscle_seg)
         muscle_seg_array = sitk.GetArrayFromImage(muscle_seg_array)
 
+        muscle_download_displayer = DownloadDisplayer()
+        muscle_download_displayer.display(os.path.split(muscle_seg)[1], "Muscle Segmentation")
+
     if lesion_detection_seg is not None:
         detection_seg_array = read_nifti_image(lesion_detection_seg)
         detection_seg_array = sitk.GetArrayFromImage(detection_seg_array)
+
+        detection_seg_download_displayer = DownloadDisplayer()
+        detection_seg_download_displayer.display(os.path.split(lesion_detection_seg)[1],
+                                                 "Lesion Detection Segmentation")
 
     if lesion_mask_seg is not None:
         mask_seg_array = read_nifti_image(lesion_mask_seg)
         mask_seg_array = sitk.GetArrayFromImage(mask_seg_array)
 
+        mask_seg_download_displayer = DownloadDisplayer()
+        mask_seg_download_displayer.display(os.path.join(lesion_mask_seg)[1], "Lesion Detection Mask")
+
+    lungmask_displayer.display()
+    fat_report_displayer.display()
 
     __display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
                                attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)

@@ -5,10 +5,14 @@ import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
 import csv
+import os
+from display.download_button import DownloadDisplayer
+import os
 
 class FatReportDisplayer:
 
-    def __init__(self, original_array, lung_seg_array, fat_report_path=None, fat_interval=None):
+    def __init__(self, original_array, lung_seg_array, fat_report_path=None, fat_interval=None,
+                 download_displayer=None):
 
         if fat_report_path is None:
             self.fat_report = None
@@ -33,6 +37,15 @@ class FatReportDisplayer:
 
         self.sat_vols = [elem['satVol'] for elem in self.fat_report]
         self.vat_vols = [elem['vatVol'] for elem in self.fat_report]
+
+        self.download_displayer = download_displayer if download_displayer is not None else DownloadDisplayer()
+
+    def download_button(self):
+        if self.fat_report is None:
+            return
+
+        self.download_displayer.display(os.path.split(self.fat_report_path)[1],
+                                        "Subcutaneous and Visceral Fat Measurements")
 
     def display(self):
 
