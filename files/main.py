@@ -510,7 +510,6 @@ def worker_selection():
     return workers_selected
 
 if __name__ == "__main__":
-    print(sys.version)
 
     #### Page Header #####
     # st.title("CoCaCoLA - The Cool Calculator for Corona Lung Assessment")
