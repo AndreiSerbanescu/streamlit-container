@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit
 from functools import reduce
 import operator
 import numpy as np
@@ -12,11 +12,13 @@ import os
 class FatReportDisplayer:
 
     def __init__(self, original_array, lung_seg_array, fat_report_path=None, fat_interval=None,
-                 download_displayer=None):
+                 download_displayer=None, streamlit_wrapper=None):
 
         if fat_report_path is None:
             self.fat_report = None
             return
+
+        self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
 
         self.original_array = original_array
         self.lung_seg_array = lung_seg_array
@@ -52,20 +54,20 @@ class FatReportDisplayer:
         if self.fat_report is None:
             return
 
-        st.markdown(self.paper_citation)
-        st.markdown('**Fat Report**')
+        self.st.markdown(self.paper_citation)
+        self.st.markdown('**Fat Report**')
 
         fat_report_len = len(self.fat_report)
 
         assert len(self.vat_vols) == len(self.sat_vols) == len(self.fat_report)
 
-        st.markdown("**Total fat tissue information**")
+        self.st.markdown("**Total fat tissue information**")
         self.__display_agg_info(0, fat_report_len)
 
-        st.markdown("**Lower half tissue information**")
+        self.st.markdown("**Lower half tissue information**")
         self.__display_agg_info(0, fat_report_len // 2)
 
-        st.markdown("**Lower third tissue information**")
+        self.st.markdown("**Lower third tissue information**")
         self.__display_agg_info(0, fat_report_len // 3)
 
         if self.fat_interval is not None:
@@ -74,7 +76,7 @@ class FatReportDisplayer:
             from_slice = int(top * fat_report_len / 100)
             to_slice = int(bottom * fat_report_len / 100)
 
-            st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
+            self.st.markdown(f"**Custom from slice {from_slice} to slice {to_slice}**")
 
             self.__display_agg_info(from_slice, to_slice)
 
@@ -96,9 +98,9 @@ class FatReportDisplayer:
 
         self.__display_partial_volume(from_slice, to_slice)
 
-        st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
-        st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
-        st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
+        self.st.text(f"visceral to subcutaneous ratio {vat_tissue_cm3 / sat_tissue_cm3}")
+        self.st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
+        self.st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
 
     def __display_confidence_interval(self):
         #TODO implement
@@ -173,4 +175,4 @@ class FatReportDisplayer:
 
         im = im.resize((250, 250))
 
-        st.image(im)
+        self.st.image(im)
