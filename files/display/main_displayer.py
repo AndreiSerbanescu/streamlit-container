@@ -85,8 +85,8 @@ class MainDisplayer:
         lungmask_displayer.display()
         fat_report_displayer.display()
 
-        # self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
-        #                            attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
+        self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
+                                   attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
 
         if self.save_to_pdf:
             self.__save_to_pdf()
@@ -94,12 +94,13 @@ class MainDisplayer:
     def __save_to_pdf(self):
         assert self.use_st_wrapper
 
-        lines = self.st.wrapper_get_lines()
+        report_dir = self.st.generate_markdown_report()
 
-        import time
-        filename = f"/tmp/report{time.time()}.md"
-        pdf_generator = self.pdf_saver_class(filename, lines)
-        pdf_path = pdf_generator.generate_report()
+        pdf_generator = self.pdf_saver_class(report_dir)
+
+        pdf_path = pdf_generator.generate_pdf()
+
+
 
     def __display_information_rows(self, original_array, lung_seg, muscle_seg, detection_array, attention_array,
                                    detection_seg_array, mask_seg_array, fat_report_cm3):

@@ -27,7 +27,7 @@ class LungmaskSegmentationDisplayer:
         spx, spy, spz = self.original_nifti.GetSpacing()
 
         self.st.header("HU distribution:")
-        generateHUplots.generateHUPlots(self.original_array, self.segmentation_array, 2)
+        generateHUplots.generateHUPlots(self.original_array, self.segmentation_array, 2, streamlit_wrapper=self.st)
 
         right = np.count_nonzero(self.segmentation_array == 1) * spx * spy * spz
         left = np.count_nonzero(self.segmentation_array == 2) * spx * spy * spz
