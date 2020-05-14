@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from exceptions.workers import *
 import requests
 import shutil
-from display.main_displayer import display_volume_and_slice_information
+from display.main_displayer import MainDisplayer
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -206,13 +206,14 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         st.markdown("**Lungmask segmentation failed**")
         return
 
-    display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
-                                         lesion_detection=lesion_detection_path,
-                                         lesion_attention=lesion_attention_path,
-                                         lesion_detection_seg=lesion_seg_detection_path,
-                                         lesion_mask_seg=lesion_seg_mask_path,
-                                         fat_report=fat_report_path,
-                                         fat_interval=fat_interval)
+    main_displayer = MainDisplayer()
+    main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
+                                                        lesion_detection=lesion_detection_path,
+                                                        lesion_attention=lesion_attention_path,
+                                                        lesion_detection_seg=lesion_seg_detection_path,
+                                                        lesion_mask_seg=lesion_seg_mask_path,
+                                                        fat_report=fat_report_path,
+                                                        fat_interval=fat_interval)
 
 def __display_worker_not_ready(hostname):
     st.markdown(f"**{hostname} worker didn't start properly**")
@@ -314,13 +315,15 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                                     download_name="lesion_seg_mask.nii.gz",
                                                                     copy_only=True)
 
-        display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
-                                             lesion_detection=lesion_detection_path,
-                                             lesion_attention=lesion_attention_path,
-                                             lesion_detection_seg=lesion_seg_detection_path,
-                                             lesion_mask_seg=lesion_seg_mask_path,
-                                             fat_report=fat_report_path,
-                                             fat_interval=fat_interval)
+
+        main_displayer = MainDisplayer()
+        main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
+                                                            lesion_detection=lesion_detection_path,
+                                                            lesion_attention=lesion_attention_path,
+                                                            lesion_detection_seg=lesion_seg_detection_path,
+                                                            lesion_mask_seg=lesion_seg_mask_path,
+                                                            fat_report=fat_report_path,
+                                                            fat_interval=fat_interval)
 
 def worker_selection():
     worker_methods, worker_names = get_worker_information()
