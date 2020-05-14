@@ -31,6 +31,7 @@ RUN apt-get install -y texlive-latex-extra
 RUN apt-get install -y texlive-pictures
 RUN apt-get install -y texlive-fonts-recommended
 RUN pip3 install pdflatex
+RUN apt-get install -y pandoc
 
 RUN mkdir /app/src
 COPY files/ /app/src/
