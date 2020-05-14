@@ -21,5 +21,16 @@ RUN apt-get install -y locales && locale-gen en_US.UTF-8
 RUN apt-get install curl -y #debugging
 RUN apt-get install vim -y #debugging
 
+# Install dependencies for generating report
+RUN pip3 install pandoc
+
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update
+RUN apt-get install -y texlive-latex-base
+RUN apt-get install -y texlive-latex-extra
+RUN apt-get install -y texlive-pictures
+RUN apt-get install -y texlive-fonts-recommended
+RUN pip3 install pdflatex
+
 RUN mkdir /app/src
 COPY files/ /app/src/
