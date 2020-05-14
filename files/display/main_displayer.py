@@ -8,24 +8,30 @@ from display.download_button import DownloadDisplayer
 import os
 import numpy as np
 import streamlit
+from report_generator.pdf_saver import Markdown2Pdf
 
 
 class MainDisplayer:
 
-    def __init__(self, streamlit_wrapper=None):
+    def __init__(self, streamlit_wrapper=None, save_to_pdf=True, pdf_saver_class=None):
 
         self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
+        self.use_st_wrapper = streamlit_wrapper is not None
+
+        self.save_to_pdf = save_to_pdf
+
+        self.pdf_saver_class = Markdown2Pdf if pdf_saver_class is None else pdf_saver_class
 
     def display_volume_and_slice_information(self, input_nifti_path, lung_seg_path, muscle_seg=None,
                                              lesion_detection=None, lesion_attention=None, lesion_detection_seg=None,
                                              lesion_mask_seg=None, fat_report=None, fat_interval=None):
 
-        lungmask_displayer = LungmaskSegmentationDisplayer(input_nifti_path, lung_seg_path)
+        lungmask_displayer = LungmaskSegmentationDisplayer(input_nifti_path, lung_seg_path, streamlit_wrapper=self.st)
         original_array, lung_seg = lungmask_displayer.get_arrays()
 
         # fat_report may be None, in which case fat_report_displayer doesn't display anything
         fat_report_displayer = FatReportDisplayer(original_array, lung_seg, fat_report,
-                                                  fat_interval=fat_interval)
+                                                  fat_interval=fat_interval, streamlit_wrapper=self.st)
 
         lungmask_displayer.download_button()
         fat_report_displayer.download_button()
@@ -79,8 +85,21 @@ class MainDisplayer:
         lungmask_displayer.display()
         fat_report_displayer.display()
 
-        self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
-                                   attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
+        # self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
+        #                            attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
+
+        if self.save_to_pdf:
+            self.__save_to_pdf()
+
+    def __save_to_pdf(self):
+        assert self.use_st_wrapper
+
+        lines = self.st.wrapper_get_lines()
+
+        import time
+        filename = f"/tmp/report{time.time()}.md"
+        pdf_generator = self.pdf_saver_class(filename, lines)
+        pdf_path = pdf_generator.generate_report()
 
     def __display_information_rows(self, original_array, lung_seg, muscle_seg, detection_array, attention_array,
                                    detection_seg_array, mask_seg_array, fat_report_cm3):

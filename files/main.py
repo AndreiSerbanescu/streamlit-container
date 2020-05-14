@@ -10,6 +10,7 @@ from exceptions.workers import *
 import requests
 import shutil
 from display.main_displayer import MainDisplayer
+from report_generator.pandoc_streamlit_wrapper import PandocStreamlitWrapper
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -206,7 +207,8 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         st.markdown("**Lungmask segmentation failed**")
         return
 
-    main_displayer = MainDisplayer()
+
+    main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper())
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
                                                         lesion_attention=lesion_attention_path,
@@ -315,8 +317,7 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                                     download_name="lesion_seg_mask.nii.gz",
                                                                     copy_only=True)
 
-
-        main_displayer = MainDisplayer()
+        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper())
         main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                             lesion_detection=lesion_detection_path,
                                                             lesion_attention=lesion_attention_path,
