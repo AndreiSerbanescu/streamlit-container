@@ -2,6 +2,11 @@ import logging
 import sys
 import os
 import subprocess as sb
+import time
+import random
+
+def get_unique_id():
+    return str(time.time()) + "-" + str(random.randint(0, 10000000))
 
 def setup_logging():
     file_handler = logging.FileHandler("../log.log")
