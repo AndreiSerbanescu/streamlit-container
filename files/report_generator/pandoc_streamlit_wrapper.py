@@ -16,11 +16,21 @@ class PandocStreamlitWrapper:
     def generate_markdown_report(self):
         report_filename = os.path.join(self.report_dir, "report.md")
 
+        self.md_lines = self.__draw_introduction()
+
         with open(report_filename, "w") as md_report:
             data = "  \n\n".join(self.md_lines)
             md_report.write(data)
 
         return self.report_dir
+
+    def __draw_introduction(self):
+        intro_lines = []
+
+        intro_lines.append('# CoViD-19 Risk Calculator')
+        # TODO additional introduction information
+
+        return intro_lines + self.md_lines
 
     def __create_report_dir(self, base_dir):
         unique_id = get_unique_id()
@@ -76,38 +86,49 @@ class PandocStreamlitWrapper:
     def image(self, *args, **kwargs):
 
         if isinstance(args[0], list):
-
             captions = kwargs.get("caption", ["" for i in range(len(args[0]))])
-
-            base_image_name = f"image_row_{self.image_index}"
-            self.image_index += 1
-
-            row_index = 0
-
-            image_filenames = []
-
-            for image in args[0]:
-                image_name = base_image_name + f"_{row_index}.png"
-                row_index += 1
-
-                image_filename = os.path.join(self.report_dir, image_name)
-                image.save(image_filename)
-
-                image_filenames.append(image_filename)
-
-            table = self.__draw_image_table(image_filenames, captions)
+            table = self.__generate_table(args[0], captions)
             self.md_lines.append(table)
         else:
-            image_name = f"image_{self.image_index}.png"
-            self.image_index += 1
-            image_filename = os.path.join(self.report_dir, image_name)
-
-            image = args[0]
-            image.save(image_filename)
-
-            self.md_lines.append(f"![]({image_filename}){{ width=250px }}")
+            table = self.__generate_mono_table(args[0])
+            self.md_lines.append(table)
 
         st.image(*args, **kwargs)
+
+    def __generate_mono_table(self, image):
+        image_name = f"image_{self.image_index}.png"
+        self.image_index += 1
+        image_filename = os.path.join(self.report_dir, image_name)
+
+        image.save(image_filename)
+
+        return self.__draw_mono_table(image_name)
+
+    def __draw_mono_table(self, image_filename):
+        # f"![]({image_filename}){{ width=250px }}"
+
+        return f"![]({image_filename}){{ width=250px }}  |\n"
+
+
+    def __generate_table(self, images, captions):
+
+        base_image_name = f"image_row_{self.image_index}"
+        self.image_index += 1
+
+        row_index = 0
+
+        image_filenames = []
+
+        for image in images:
+            image_name = base_image_name + f"_{row_index}.png"
+            row_index += 1
+
+            image_filename = os.path.join(self.report_dir, image_name)
+            image.save(image_filename)
+
+            image_filenames.append(image_name)
+
+        return self.__draw_image_table(image_filenames, captions)
 
     def __draw_image_table(self, img_fns, captions):
         # TODO use relative filepath
@@ -127,7 +148,7 @@ class PandocStreamlitWrapper:
             table += f'![]({img_fns[-1]}){{ width=150px }}  |   |  \n' \
                      f'{captions[-1]}              |   | \n'
 
-        table += '\n\n\n\n'
+        table += '\n'
 
         return table
 
