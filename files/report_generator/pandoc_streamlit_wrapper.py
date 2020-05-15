@@ -2,6 +2,7 @@ import streamlit as st
 from common.utils import *
 import os
 from matplotlib import pyplot as plt
+import io
 
 class PandocStreamlitWrapper:
 
@@ -10,6 +11,7 @@ class PandocStreamlitWrapper:
         self.report_dir = self.__create_report_dir(base_dir)
 
         self.image_index = 0
+        self.plot_index = 0
 
     def generate_markdown_report(self):
         report_filename = os.path.join(self.report_dir, "report.md")
@@ -42,11 +44,34 @@ class PandocStreamlitWrapper:
         self.md_lines.extend(args)
         st.text(*args, **kwargs)
 
-    def pyplot(self, *args, **kwargs):
 
+    def pyplot(self, fig=None, clear_figure=True, **kwargs):
 
+        # code partially taken from streamlit pyplot implementation
 
-        st.pyplot(*args, **kwargs)
+        if fig is None:
+            fig = plt
+
+        # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
+        # So here we pick double of that to make things look good in a high
+        # DPI display.
+        options = {"dpi": 200, "format": "png"}
+
+        # If some of the options are passed in from kwargs then replace
+        # the values in options with the ones from kwargs
+        options = {a: kwargs.get(a, b) for a, b in options.items()}
+        # Merge options back into kwargs.
+        kwargs.update(options)
+
+        image_name = f"plot_{self.plot_index}.png"
+        self.plot_index += 1
+        image_filename = os.path.join(self.report_dir, image_name)
+
+        fig.savefig(image_filename, **kwargs)
+
+        self.md_lines.append(f"![]({image_filename})")
+
+        st.pyplot(fig=fig, clear_figure=clear_figure, **kwargs)
 
     def image(self, *args, **kwargs):
 
@@ -87,8 +112,6 @@ class PandocStreamlitWrapper:
     def __draw_image_table(self, img_fns, captions):
         # TODO use relative filepath
 
-        # TODO fix format per page with slice information and fat measurements per slice
-
         table = "--             |  --         \n" \
                 ":-------------------------:|:-------------------------:|\n"
 
@@ -103,6 +126,8 @@ class PandocStreamlitWrapper:
         if len(img_fns) % 2 == 1:
             table += f'![]({img_fns[-1]}){{ width=150px }}  |   |  \n' \
                      f'{captions[-1]}              |   | \n'
+
+        table += '\n\n\n\n'
 
         return table
 

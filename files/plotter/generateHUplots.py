@@ -110,8 +110,8 @@ def plotGraph(img, msk, label = 1):
 
 def generateHUPlots(img, msk, num_labels, streamlit_wrapper=None):
 
-    # if streamlit_wrapper is not None:
-    #     st = streamlit_wrapper
+    if streamlit_wrapper is not None:
+        st = streamlit_wrapper
 
     plt.figure(figsize=(8, 4))
     for n in range(num_labels):
@@ -120,4 +120,6 @@ def generateHUPlots(img, msk, num_labels, streamlit_wrapper=None):
         plotGraph(img, msk, label = lbl)
         plt.title('Patient label ' + str(lbl) )
     plt.tight_layout()
+
+    plt.show()
     st.pyplot()
