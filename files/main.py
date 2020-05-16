@@ -11,6 +11,7 @@ import requests
 import shutil
 from display.main_displayer import MainDisplayer
 from report_generator.pandoc_streamlit_wrapper import PandocStreamlitWrapper
+from common import utils
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -173,33 +174,37 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     lesion_seg_mask_path = None
     lesion_seg_detection_path = None
 
+    unique_id = utils.get_unique_id()
+
     if LUNGMASK_SEGMENT in value_map:
         lungmask_path, input_path = value_map[LUNGMASK_SEGMENT]
-        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, download_name="lungmask.nii.gz")
-        input_path = move_file_to_fileserver_base_dir(input_path, download_name="input.nii.gz")
+        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, download_name=f"lungmask-{unique_id}.nii.gz")
+        input_path = move_file_to_fileserver_base_dir(input_path, download_name=f"input-{unique_id}.nii.gz")
 
 
     if CT_FAT_REPORT in value_map:
         fat_report_path = value_map[CT_FAT_REPORT]
-        fat_report_path = move_file_to_fileserver_base_dir(fat_report_path, download_name="fat_report.txt")
+        fat_report_path = move_file_to_fileserver_base_dir(fat_report_path, download_name=f"fat_report-{unique_id}.txt")
 
     if CT_MUSCLE_SEGMENTATION in value_map:
         muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
-        muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path, download_name="muscle_segmentation.nii.gz")
+        muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
+                                                           download_name=f"muscle_segmentation-{unique_id}.nii.gz")
 
     if LESION_DETECTION in value_map:
         lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
         lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
-                                                                 download_name="lesion_attention.nii.gz")
+                                                                 download_name=f"lesion_attention-{unique_id}.nii.gz")
         lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
-                                                                 download_name="lesion_detection.nii.gz")
+                                                                 download_name=f"lesion_detection-{unique_id}.nii.gz")
 
     if LESION_DETECTION_SEG in value_map:
         lesion_seg_mask_path, lesion_seg_detection_path = value_map[LESION_DETECTION_SEG]
         lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
-                                                                download_name="lesion_seg_mask.nii.gz")
+                                                                download_name=f"lesion_seg_mask-{unique_id}.nii.gz")
         lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
-                                                                     download_name="lesion_seg_detection.nii.gz")
+                                                                     download_name=f"lesion_seg_detection"
+                                                                                   f"-{unique_id}.nii.gz")
 
 
     if input_path is None or lungmask_path is None:
@@ -279,6 +284,7 @@ def debug_display_button(workers_selected, fat_interval=None):
         lesion_seg_detection_path = None
         lesion_seg_mask_path = None
 
+        unique_id = utils.get_unique_id()
 
         input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
         lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
@@ -286,13 +292,13 @@ def debug_display_button(workers_selected, fat_interval=None):
         if CT_FAT_REPORT in workers_selected:
             fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
             fat_report_path = move_file_to_fileserver_base_dir(fat_report_path,
-                                                               download_name="fat_report.txt",
+                                                               download_name=f"fat_report-{unique_id}.txt",
                                                                copy_only=True)
 
         if CT_MUSCLE_SEGMENTATION in workers_selected:
             muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
             muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
-                                                               download_name="muscle_seg.nii.gz",
+                                                               download_name=f"muscle_seg-{unique_id}.nii.gz",
                                                                copy_only=True)
 
         if LESION_DETECTION in workers_selected:
@@ -300,10 +306,12 @@ def debug_display_button(workers_selected, fat_interval=None):
             lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
 
             lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
-                                                                     download_name="lesion_detection.nii.gz",
+                                                                     download_name=f"lesion_detection"
+                                                                                   f"-{unique_id}.nii.gz",
                                                                      copy_only=True)
             lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
-                                                                     download_name="lesion_attention.nii.gz",
+                                                                     download_name=f"lesion_attention"
+                                                                                   f"-{unique_id}.nii.gz",
                                                                      copy_only=True)
 
         if LESION_DETECTION_SEG in workers_selected:
@@ -311,10 +319,11 @@ def debug_display_button(workers_selected, fat_interval=None):
             lesion_seg_mask_path = "/app/source/all_outputs/lesion_seg_mask.nii.gz"
 
             lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
-                                                                         download_name="lesion_seg_detection.nii.gz",
+                                                                         download_name=f"lesion_seg_detection"
+                                                                                       f"-{unique_id}.nii.gz",
                                                                          copy_only=True)
             lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
-                                                                    download_name="lesion_seg_mask.nii.gz",
+                                                                    download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
                                                                     copy_only=True)
 
         main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper())
