@@ -421,7 +421,6 @@ if __name__ == "__main__":
                 resource = scan.resources[res_name]
 
                 workers_selected = worker_selection()
-                download_and_analyse_button_xnat(subject_name, scan, workers_selected)
 
                 if CT_FAT_REPORT in workers_selected:
                     st.text("Select portion of lung CT to calculate the adipose tissue volumes")
