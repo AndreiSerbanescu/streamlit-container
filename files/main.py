@@ -107,7 +107,9 @@ def lungmask_segment(source_dir, filepath_only=False):
 def copy_files_to_shared_directory(source_dir):
 
     data_share = os.environ["DATA_SHARE_PATH"]
-    input = "streamlit_input"
+
+    unique_id = utils.get_unique_id()
+    input = "streamlit_input" + unique_id
     abs_input_path = os.path.join(data_share, input)
 
     if not os.path.exists(abs_input_path):
@@ -229,7 +231,7 @@ def __display_worker_failed(hostname):
     st.markdown(f"**{hostname} worker failed**")
 
 def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=None):
-    if st.button('download and analyse'):
+    if st.button('download and analyse', key="xnat-download-button"):
         latest_iteration = st.empty()
 
         bar = st.progress(0)
@@ -253,9 +255,10 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_i
 
 def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=None):
 
-    if st.button('download and analyse'):
+    if st.button('download and analyse', key="uploaded download button"):
         file_type = ".nii.gz"
-        filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + file_type)
+        unique_id = utils.get_unique_id()
+        filename = os.path.join(os.environ['DATA_SHARE_PATH'], "input" + unique_id + file_type)
 
         with open(filename, "wb") as f:
             try:
