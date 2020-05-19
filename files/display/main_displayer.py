@@ -99,6 +99,7 @@ class MainDisplayer:
         pdf_generator = self.pdf_saver_class(report_dir)
 
         pdf_path = pdf_generator.generate_pdf()
+        print(f"generated report pdf path {pdf_path}")
 
 
 

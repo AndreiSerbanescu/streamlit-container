@@ -12,6 +12,7 @@ import shutil
 from display.main_displayer import MainDisplayer
 from report_generator.pandoc_streamlit_wrapper import PandocStreamlitWrapper
 from common import utils
+from threading import Thread
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -143,6 +144,13 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         st.markdown("**Need to select at least one container**")
         return
 
+    report_thread = Thread(target=__display_thread, args=(source_dir, fat_interval, PandocStreamlitWrapper()))
+    report_thread.start()
+
+    report_thread.join()
+
+def __display_thread(source_dir, fat_interval, streamlit_wrapper):
+
     worker_methods = get_worker_information()[0]
 
     future_map = {}
@@ -162,10 +170,9 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
             value = future.result()
             value_map[key] = value
         except WorkerNotReadyException:
-            __display_worker_not_ready(key)
+            __display_worker_not_ready(key, streamlit_wrapper=streamlit_wrapper)
         except WorkerFailedException:
-            __display_worker_failed(key)
-
+            __display_worker_failed(key, streamlit_wrapper=streamlit_wrapper)
 
     lungmask_path = None
     input_path = None
@@ -182,7 +189,6 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
         lungmask_path, input_path = value_map[LUNGMASK_SEGMENT]
         lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, download_name=f"lungmask-{unique_id}.nii.gz")
         input_path = move_file_to_fileserver_base_dir(input_path, download_name=f"input-{unique_id}.nii.gz")
-
 
     if CT_FAT_REPORT in value_map:
         fat_report_path = value_map[CT_FAT_REPORT]
@@ -208,14 +214,12 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
                                                                      download_name=f"lesion_seg_detection"
                                                                                    f"-{unique_id}.nii.gz")
 
-
     if input_path is None or lungmask_path is None:
-        st.markdown("**Cannot display**")
-        st.markdown("**Lungmask segmentation failed**")
+        streamlit_wrapper.markdown("**Cannot display**")
+        streamlit_wrapper.markdown("**Lungmask segmentation failed**")
         return
 
-
-    main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper())
+    main_displayer = MainDisplayer(streamlit_wrapper=streamlit_wrapper)
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
                                                         lesion_attention=lesion_attention_path,
@@ -224,11 +228,18 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
                                                         fat_report=fat_report_path,
                                                         fat_interval=fat_interval)
 
-def __display_worker_not_ready(hostname):
-    st.markdown(f"**{hostname} worker didn't start properly**")
 
-def __display_worker_failed(hostname):
-    st.markdown(f"**{hostname} worker failed**")
+def __display_worker_not_ready(hostname, streamlit_wrapper=None):
+    import streamlit
+
+    st_wrap = streamlit_wrapper if streamlit_wrapper is not None else streamlit
+    st_wrap.markdown(f"**{hostname} worker didn't start properly**")
+
+def __display_worker_failed(hostname, streamlit_wrapper=None):
+    import streamlit
+
+    st_wrap = streamlit_wrapper if streamlit_wrapper is not None else streamlit
+    st_wrap.markdown(f"**{hostname} worker failed**")
 
 def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=None):
     if st.button('download and analyse', key="xnat-download-button"):
@@ -247,7 +258,7 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_i
         st.text('Analysis progress...')
 
         source_dir = copy_files_to_shared_directory(download_dir)
-        start_download_and_analyse(source_dir, workers_selected)
+        start_download_and_analyse(source_dir, workers_selected, fat_interval=fat_interval)
 
     debug_display_button(workers_selected, fat_interval=fat_interval)
 
@@ -349,6 +360,19 @@ def worker_selection():
     # lungmask segment runs by default
     workers_selected.append(LUNGMASK_SEGMENT)
     return workers_selected
+
+def thread_test_delete_this():
+    from time import sleep
+    while True:
+        print("Tertiary thread still running")
+        sleep(1)
+
+def start_thread_test_delete_this():
+    from threading import Thread
+    print("starting new thread")
+    t = Thread(target=thread_test_delete_this)
+    t.start()
+
 
 if __name__ == "__main__":
 
@@ -455,6 +479,6 @@ if __name__ == "__main__":
 
         ##### File Selector #####
 
-
+    # start_thread_test_delete_this()
     ##### XNAT connection #####
 
