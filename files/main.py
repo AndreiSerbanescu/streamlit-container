@@ -356,6 +356,7 @@ if __name__ == "__main__":
     # st.title("CoCaCoLA - The Cool Calculator for Corona Lung Assessment")
     st.title("CoViD-19 Risk Calculator")  # for more formal occasions :S
     pcr_positive = st.checkbox("PCR Positive?")
+    seropositive = st.checkbox("Seropositive?")
     #### Page Header #####
 
     ##### Sidebar ######
