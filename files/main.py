@@ -221,7 +221,7 @@ def __display_thread(source_dir, fat_interval, streamlit_wrapper):
 
 
     main_displayer = MainDisplayer(streamlit_wrapper=streamlit_wrapper, save_to_pdf=True,
-                                   email_receiver="andreis120@gmail.com", subject_name="Test subject")
+                                   email_receiver=email_address, subject_name="Test subject")
 
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
@@ -386,6 +386,13 @@ if __name__ == "__main__":
     st.title("CoViD-19 Risk Calculator")  # for more formal occasions :S
     pcr_positive = st.checkbox("PCR Positive?")
     seropositive = st.checkbox("Seropositive?")
+
+    send_email = st.checkbox("Send email")
+
+    email_address = None
+    if send_email:
+        email_address = st.text_input("Enter email address for sending the report")
+
     #### Page Header #####
 
     ##### Sidebar ######
