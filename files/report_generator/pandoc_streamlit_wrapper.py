@@ -131,22 +131,20 @@ class PandocStreamlitWrapper:
         return self.__draw_image_table(image_filenames, captions)
 
     def __draw_image_table(self, img_fns, captions):
-        # TODO use relative filepath
 
         table = "--             |  --         \n" \
                 ":-------------------------:|:-------------------------:|\n"
 
-        for i in range(len(img_fns) // 2):
+        for i in range(0, len(img_fns), 2):
 
             image_left = img_fns[i]
-            image_right = img_fns[i + 1] if i < len(img_fns) else None
+            image_right = img_fns[i + 1] if i + 1 < len(img_fns) else None
+
+            caption_left = captions[i]
+            captions_right = captions[i + 1] if i + 1 < len(img_fns) else ""
 
             table += f'![]({image_left}){{ width=150px }}  |  ![]({image_right}){{ width=150px }} |  \n' \
-                     f'{captions[i]}              | {captions[i + 1]}  | \n'
-
-        if len(img_fns) % 2 == 1:
-            table += f'![]({img_fns[-1]}){{ width=150px }}  |   |  \n' \
-                     f'{captions[-1]}              |   | \n'
+                     f'{caption_left}              | {captions_right}  | \n'
 
         table += '\n'
 
