@@ -219,7 +219,10 @@ def __display_thread(source_dir, fat_interval, streamlit_wrapper):
         streamlit_wrapper.markdown("**Lungmask segmentation failed**")
         return
 
-    main_displayer = MainDisplayer(streamlit_wrapper=streamlit_wrapper)
+
+    main_displayer = MainDisplayer(streamlit_wrapper=streamlit_wrapper, save_to_pdf=True,
+                                   email_receiver="andreis120@gmail.com", subject_name="Test subject")
+
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
                                                         lesion_attention=lesion_attention_path,
@@ -340,7 +343,9 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                                     download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
                                                                     copy_only=True)
 
-        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper())
+        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=True,
+                                       email_receiver="andreis120@gmail.com", subject_name="Test subject")
+
         main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                             lesion_detection=lesion_detection_path,
                                                             lesion_attention=lesion_attention_path,

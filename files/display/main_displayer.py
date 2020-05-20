@@ -9,16 +9,20 @@ import os
 import numpy as np
 import streamlit
 from report_generator.pdf_saver import Markdown2Pdf
+from email_sender.email_sender import EmailSender
 
 
 class MainDisplayer:
 
-    def __init__(self, streamlit_wrapper=None, save_to_pdf=True, pdf_saver_class=None):
+    def __init__(self, streamlit_wrapper=None, save_to_pdf=True, email_receiver=None,
+                 subject_name=None, pdf_saver_class=None):
 
         self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
         self.use_st_wrapper = streamlit_wrapper is not None
 
         self.save_to_pdf = save_to_pdf
+        self.email_receiver = email_receiver
+        self.subject_name = "" if subject_name is None else subject_name
 
         self.pdf_saver_class = Markdown2Pdf if pdf_saver_class is None else pdf_saver_class
 
@@ -89,7 +93,18 @@ class MainDisplayer:
                                    attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
 
         if self.save_to_pdf:
-            self.__save_to_pdf()
+            pdf_path = self.__save_to_pdf()
+
+            self.__send_email(pdf_path)
+
+    def __send_email(self, pdf_path):
+
+        if self.email_receiver is None:
+            print(f"No email receiver - not sending email")
+            return
+
+        email_sender = EmailSender()
+        email_sender.send_email(self.email_receiver, self.subject_name, pdf_path)
 
     def __save_to_pdf(self):
         assert self.use_st_wrapper
@@ -101,6 +116,7 @@ class MainDisplayer:
         pdf_path = pdf_generator.generate_pdf()
         print(f"generated report pdf path {pdf_path}")
 
+        return pdf_path
 
 
     def __display_information_rows(self, original_array, lung_seg, muscle_seg, detection_array, attention_array,
