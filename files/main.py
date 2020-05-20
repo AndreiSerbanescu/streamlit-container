@@ -2,17 +2,12 @@ import streamlit as st
 import numpy as np
 import xnat
 import os
-import segmenter
 from pathlib import Path
 import subprocess as sb
-from concurrent.futures import ThreadPoolExecutor
-from exceptions.workers import *
 import requests
-import shutil
-from display.main_displayer import MainDisplayer
-from report_generator.pandoc_streamlit_wrapper import PandocStreamlitWrapper
+from common_display.display.main_displayer import MainDisplayer
 from common import utils
-from threading import Thread
+from commander.commander import CommanderHandler
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -43,67 +38,6 @@ def get_files(connection, project, subject, session, scan, resource):
     files = resource.files.values()
     return files
 
-def get_worker_information():
-
-    worker_names = [LUNGMASK_SEGMENT, CT_FAT_REPORT, CT_MUSCLE_SEGMENTATION,
-                    LESION_DETECTION, LESION_DETECTION_SEG]
-
-    worker_methods = {
-        LUNGMASK_SEGMENT: lungmask_segment,
-        CT_FAT_REPORT: ct_fat_report,
-        CT_MUSCLE_SEGMENTATION: ct_muscle_segment,
-        LESION_DETECTION: lesion_detect,
-        LESION_DETECTION_SEG: lesion_detect_seg
-    }
-
-    return worker_methods, worker_names
-
-def ct_fat_report(source_file, filepath_only=False):
-    print("ct fat report called with", source_file)
-
-    if segmenter.is_nifti(source_file):
-        return segmenter.ct_fat_measure_nifti(source_file, filepath_only=filepath_only)
-    else:
-        return segmenter.ct_fat_measure_dcm(source_file, filepath_only=filepath_only)
-
-
-def ct_muscle_segment(source_file, filepath_only=False):
-    print("ct muscle segment called with", source_file)
-
-    if segmenter.is_nifti(source_file):
-        muscle_segmentation, original = segmenter.ct_muscle_segment_nifti(source_file, filepath_only=filepath_only)
-    else:
-        muscle_segmentation, original = segmenter.ct_muscle_segment_dcm(source_file, filepath_only=filepath_only)
-
-    return muscle_segmentation
-
-
-def lesion_detect(source_file, filepath_only=False):
-    print("lesion detect called with", source_file)
-
-    if segmenter.is_nifti(source_file):
-        attention_volume, detection_volume = segmenter.covid_detector_nifti(source_file, filepath_only=filepath_only)
-    else:
-        attention_volume, detection_volume = segmenter.covid_detector_dcm(source_file, filepath_only=filepath_only)
-
-
-    return attention_volume, detection_volume
-
-
-def lesion_detect_seg(source_file, filepath_only=False):
-    print("lesion detect seg called with", source_file)
-
-    if segmenter.is_nifti(source_file):
-        mask_volume, detection_volume = segmenter.covid_detector_seg_nifti(source_file, filepath_only=filepath_only)
-    else:
-        mask_volume, detection_volume = segmenter.covid_detector_seg_dcm(source_file, filepath_only=filepath_only)
-
-    return mask_volume, detection_volume
-
-
-def lungmask_segment(source_dir, filepath_only=False):
-    segmentation, input = segmenter.lungmask_segment(source_dir, model_name='R231CovidWeb', filepath_only=filepath_only)
-    return segmentation, input
 
 def copy_files_to_shared_directory(source_dir):
 
@@ -124,104 +58,44 @@ def copy_files_to_shared_directory(source_dir):
 
     return os.path.join(input, "files")
 
-def move_file_to_fileserver_base_dir(filepath, download_name=None, copy_only=False):
-
-    name = os.path.split(filepath)[1] if download_name is None else download_name
-
-    fileserver_base_dir = os.environ["FILESERVER_BASE_DIR"]
-
-    fs_out_filename = os.path.join(fileserver_base_dir, name)
-
-    if copy_only:
-        shutil.copyfile(filepath, fs_out_filename)
-    else:
-        shutil.move(filepath, fs_out_filename)
-    return fs_out_filename
-
 def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
 
     if len(workers_selected) == 0:
         st.markdown("**Need to select at least one container**")
         return
 
-    report_thread = Thread(target=__display_thread, args=(source_dir, fat_interval, PandocStreamlitWrapper()))
-    report_thread.start()
+    commander_share_path = os.environ["COMMANDER_AND_STREAMLIT_SHARE_PATH"]
+    config_in_dir = os.path.join(commander_share_path, "config")
+    result_dir = os.path.join(commander_share_path, "result")
 
-    report_thread.join()
+    ch = CommanderHandler(config_in_dir, result_dir)
+    paths, workers_not_ready, workers_failed \
+        = ch.call_commander("test subject name", source_dir, workers_selected, fat_interval)
 
-def __display_thread(source_dir, fat_interval, streamlit_wrapper):
+    lungmask_path = paths.get("lungmask")
+    input_path = paths.get("input")
+    fat_report_path = paths.get("fat_report")
+    muscle_seg_path = paths.get("muscle_seg")
+    lesion_detection_path = paths.get("lesion_detection")
+    lesion_attention_path = paths.get("lesion_attention")
+    lesion_seg_mask_path = paths.get("lesion_seg_mask")
+    lesion_seg_detection_path = paths.get("lesion_seg_detection")
 
-    worker_methods = get_worker_information()[0]
+    display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_path, lesion_attention_path,
+                   lesion_seg_detection_path, lesion_seg_mask_path, fat_report_path, fat_interval)
 
-    future_map = {}
-    with ThreadPoolExecutor() as executor:
 
-        for worker in workers_selected:
-            method = worker_methods[worker]
-
-            future = executor.submit(method, source_dir, filepath_only=True)
-            future_map[worker] = future
-
-    value_map = {}
-    for key in future_map:
-        future = future_map[key]
-
-        try:
-            value = future.result()
-            value_map[key] = value
-        except WorkerNotReadyException:
-            __display_worker_not_ready(key, streamlit_wrapper=streamlit_wrapper)
-        except WorkerFailedException:
-            __display_worker_failed(key, streamlit_wrapper=streamlit_wrapper)
-
-    lungmask_path = None
-    input_path = None
-    fat_report_path = None
-    muscle_seg_path = None
-    lesion_detection_path = None
-    lesion_attention_path = None
-    lesion_seg_mask_path = None
-    lesion_seg_detection_path = None
-
-    unique_id = utils.get_unique_id()
-
-    if LUNGMASK_SEGMENT in value_map:
-        lungmask_path, input_path = value_map[LUNGMASK_SEGMENT]
-        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, download_name=f"lungmask-{unique_id}.nii.gz")
-        input_path = move_file_to_fileserver_base_dir(input_path, download_name=f"input-{unique_id}.nii.gz")
-
-    if CT_FAT_REPORT in value_map:
-        fat_report_path = value_map[CT_FAT_REPORT]
-        fat_report_path = move_file_to_fileserver_base_dir(fat_report_path, download_name=f"fat_report-{unique_id}.txt")
-
-    if CT_MUSCLE_SEGMENTATION in value_map:
-        muscle_seg_path = value_map[CT_MUSCLE_SEGMENTATION]
-        muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
-                                                           download_name=f"muscle_segmentation-{unique_id}.nii.gz")
-
-    if LESION_DETECTION in value_map:
-        lesion_attention_path, lesion_detection_path = value_map[LESION_DETECTION]
-        lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
-                                                                 download_name=f"lesion_attention-{unique_id}.nii.gz")
-        lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
-                                                                 download_name=f"lesion_detection-{unique_id}.nii.gz")
-
-    if LESION_DETECTION_SEG in value_map:
-        lesion_seg_mask_path, lesion_seg_detection_path = value_map[LESION_DETECTION_SEG]
-        lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
-                                                                download_name=f"lesion_seg_mask-{unique_id}.nii.gz")
-        lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
-                                                                     download_name=f"lesion_seg_detection"
-                                                                                   f"-{unique_id}.nii.gz")
+def display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_path, lesion_attention_path,
+                   lesion_seg_detection_path, lesion_seg_mask_path, fat_report_path, fat_interval):
 
     if input_path is None or lungmask_path is None:
-        streamlit_wrapper.markdown("**Cannot display**")
-        streamlit_wrapper.markdown("**Lungmask segmentation failed**")
+        st.markdown("**Cannot display**")
+        st.markdown("**Lungmask segmentation failed**")
         return
 
 
-    main_displayer = MainDisplayer(streamlit_wrapper=streamlit_wrapper, save_to_pdf=True,
-                                   email_receiver=email_address, subject_name="Test subject")
+    # TODO add real subject name
+    main_displayer = MainDisplayer(save_to_pdf=False, subject_name="Test subject")
 
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
@@ -354,8 +228,15 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                             fat_report=fat_report_path,
                                                             fat_interval=fat_interval)
 
+# TODO maybe refactor this
+# TODO get this information from a file
+def get_worker_names():
+    return [LUNGMASK_SEGMENT, CT_FAT_REPORT, CT_MUSCLE_SEGMENTATION,
+            LESION_DETECTION, LESION_DETECTION_SEG]
+
 def worker_selection():
-    worker_methods, worker_names = get_worker_information()
+    # worker_methods, worker_names = get_worker_information()
+    worker_names = get_worker_names()
 
     worker_names.remove(LUNGMASK_SEGMENT)
 
@@ -365,18 +246,6 @@ def worker_selection():
     # lungmask segment runs by default
     workers_selected.append(LUNGMASK_SEGMENT)
     return workers_selected
-
-def thread_test_delete_this():
-    from time import sleep
-    while True:
-        print("Tertiary thread still running")
-        sleep(1)
-
-def start_thread_test_delete_this():
-    from threading import Thread
-    print("starting new thread")
-    t = Thread(target=thread_test_delete_this)
-    t.start()
 
 
 if __name__ == "__main__":

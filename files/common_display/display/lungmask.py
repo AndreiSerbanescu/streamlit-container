@@ -1,9 +1,9 @@
-from plotter import generateHUplots
+from common_display.plotter import generateHUplots
 import numpy as np
 import SimpleITK as sitk
-from workers.nifti_reader import *
+from common_display.nifti_reader import *
 import os
-from display.download_button import DownloadDisplayer
+from common_display.display.download_button import DownloadDisplayer
 import streamlit
 
 class LungmaskSegmentationDisplayer:

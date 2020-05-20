@@ -1,15 +1,15 @@
-from display.fat_report import FatReportDisplayer
-from display.lungmask import LungmaskSegmentationDisplayer
-from workers.nifti_reader import read_nifti_image
+from common_display.display.fat_report import FatReportDisplayer
+from common_display.display.lungmask import LungmaskSegmentationDisplayer
+from common_display.nifti_reader import read_nifti_image
 from PIL import Image
 from matplotlib import pyplot as plt
 import SimpleITK as sitk
-from display.download_button import DownloadDisplayer
+from common_display.display.download_button import DownloadDisplayer
 import os
 import numpy as np
 import streamlit
-from report_generator.pdf_saver import Markdown2Pdf
-from email_sender.email_sender import EmailSender
+# from report_generator.pdf_saver import Markdown2Pdf
+# from email_sender.email_sender import EmailSender
 
 
 class MainDisplayer:
@@ -92,31 +92,31 @@ class MainDisplayer:
         self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
                                    attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
 
-        if self.save_to_pdf:
-            pdf_path = self.__save_to_pdf()
-
-            self.__send_email(pdf_path)
-
-    def __send_email(self, pdf_path):
-
-        if self.email_receiver is None:
-            print(f"No email receiver - not sending email")
-            return
-
-        email_sender = EmailSender()
-        email_sender.send_email(self.email_receiver, self.subject_name, pdf_path)
-
-    def __save_to_pdf(self):
-        assert self.use_st_wrapper
-
-        report_dir = self.st.generate_markdown_report()
-
-        pdf_generator = self.pdf_saver_class(report_dir)
-
-        pdf_path = pdf_generator.generate_pdf()
-        print(f"generated report pdf path {pdf_path}")
-
-        return pdf_path
+        # if self.save_to_pdf:
+        #     pdf_path = self.__save_to_pdf()
+        #
+        #     self.__send_email(pdf_path)
+    #
+    # def __send_email(self, pdf_path):
+    #
+    #     if self.email_receiver is None:
+    #         print(f"No email receiver - not sending email")
+    #         return
+    #
+    #     email_sender = EmailSender()
+    #     email_sender.send_email(self.email_receiver, self.subject_name, pdf_path)
+    #
+    # def __save_to_pdf(self):
+    #     assert self.use_st_wrapper
+    #
+    #     report_dir = self.st.generate_markdown_report()
+    #
+    #     pdf_generator = self.pdf_saver_class(report_dir)
+    #
+    #     pdf_path = pdf_generator.generate_pdf()
+    #     print(f"generated report pdf path {pdf_path}")
+# /
+#         return pdf_path
 
 
     def __display_information_rows(self, original_array, lung_seg, muscle_seg, detection_array, attention_array,

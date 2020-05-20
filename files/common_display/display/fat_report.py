@@ -6,7 +6,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 import csv
 import os
-from display.download_button import DownloadDisplayer
+from common_display.display.download_button import DownloadDisplayer
 import os
 
 class FatReportDisplayer:
