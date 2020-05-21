@@ -36,7 +36,6 @@ class CommanderHandler:
                     filepath = os.path.join(self.result_dir, file)
 
                     info = self.__extract_info_from_result_file(filepath)
-                    os.remove(filepath)
                     return info
 
             sleep(0.5)

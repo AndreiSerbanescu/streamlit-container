@@ -58,7 +58,8 @@ def copy_files_to_shared_directory(source_dir):
 
     return os.path.join(input, "files")
 
-def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
+
+def start_download_and_analyse(source_dir, workers_selected, email_address, subject_name="", fat_interval=None):
 
     if len(workers_selected) == 0:
         st.markdown("**Need to select at least one container**")
@@ -68,9 +69,9 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     config_in_dir = os.path.join(commander_share_path, "config")
     result_dir = os.path.join(commander_share_path, "result")
 
-    ch = CommanderHandler(config_in_dir, result_dir, email_receiver="andreis120@gmail.com")
+    ch = CommanderHandler(config_in_dir, result_dir, email_receiver=email_address)
     paths, workers_not_ready, workers_failed \
-        = ch.call_commander("test subject name", source_dir, workers_selected, fat_interval)
+        = ch.call_commander(subject_name, source_dir, workers_selected, fat_interval)
 
     lungmask_path = paths.get("lungmask")
     input_path = paths.get("input")
@@ -80,6 +81,12 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     lesion_attention_path = paths.get("lesion_attention")
     lesion_seg_mask_path = paths.get("lesion_seg_mask")
     lesion_seg_detection_path = paths.get("lesion_seg_detection")
+
+
+    if email_address is None:
+        st.text("No email sent")
+    else:
+        st.text(f"Email with report sent to {email_address}")
 
     display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_path, lesion_attention_path,
                    lesion_seg_detection_path, lesion_seg_mask_path, fat_report_path, fat_interval)
@@ -118,7 +125,7 @@ def __display_worker_failed(hostname, streamlit_wrapper=None):
     st_wrap = streamlit_wrapper if streamlit_wrapper is not None else streamlit
     st_wrap.markdown(f"**{hostname} worker failed**")
 
-def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=None):
+def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address, fat_interval=None):
     if st.button('download and analyse', key="xnat-download-button"):
         latest_iteration = st.empty()
 
@@ -135,13 +142,14 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_i
         st.text('Analysis progress...')
 
         source_dir = copy_files_to_shared_directory(download_dir)
-        start_download_and_analyse(source_dir, workers_selected, fat_interval=fat_interval)
+        start_download_and_analyse(source_dir, workers_selected, email_address, subject_name=subject_name,
+                                   fat_interval=fat_interval)
 
-    debug_display_button(workers_selected, fat_interval=fat_interval)
+    # debug_display_button(workers_selected, fat_interval=fat_interval)
 
 
 
-def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=None):
+def download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name, fat_interval=None):
 
     if st.button('download and analyse', key="uploaded download button"):
         file_type = ".nii.gz"
@@ -152,81 +160,85 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, fat_inte
             try:
                 f.write(uploaded_file.getbuffer())
             except:
-                st.markdown("**No file uploaded**")
+                st.markdown("## No file uploaded**")
                 return
+
+        if subject_name is None:
+            st.markdown("## Please enter subject name")
 
         source_dir = os.path.split(filename)[1]
 
-        start_download_and_analyse(source_dir, workers_selected, fat_interval=fat_interval)
+        start_download_and_analyse(source_dir, workers_selected, email_address, subject_name=subject_name,
+                                   fat_interval=fat_interval)
 
-    debug_display_button(workers_selected, fat_interval=fat_interval)
+    # debug_display_button(workers_selected, fat_interval=fat_interval)
 
-def debug_display_button(workers_selected, fat_interval=None):
-
-    if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
-
-
-        input_path = '/app/source/all_outputs/lungmask_input.nii.gz'
-        lungmask_path = '/app/source/all_outputs/lungmask_seg.nii.gz'
-        fat_report_path = None
-        muscle_seg_path = None
-        lesion_detection_path = None
-        lesion_attention_path = None
-        lesion_seg_detection_path = None
-        lesion_seg_mask_path = None
-
-        unique_id = utils.get_unique_id()
-
-        input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
-        lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
-
-        if CT_FAT_REPORT in workers_selected:
-            fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
-            fat_report_path = move_file_to_fileserver_base_dir(fat_report_path,
-                                                               download_name=f"fat_report-{unique_id}.txt",
-                                                               copy_only=True)
-
-        if CT_MUSCLE_SEGMENTATION in workers_selected:
-            muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
-            muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
-                                                               download_name=f"muscle_seg-{unique_id}.nii.gz",
-                                                               copy_only=True)
-
-        if LESION_DETECTION in workers_selected:
-            lesion_detection_path = '/app/source/all_outputs/detection_converted-case001.nii.gz'
-            lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
-
-            lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
-                                                                     download_name=f"lesion_detection"
-                                                                                   f"-{unique_id}.nii.gz",
-                                                                     copy_only=True)
-            lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
-                                                                     download_name=f"lesion_attention"
-                                                                                   f"-{unique_id}.nii.gz",
-                                                                     copy_only=True)
-
-        if LESION_DETECTION_SEG in workers_selected:
-            lesion_seg_detection_path = "/app/source/all_outputs/lesion_seg_detection.nii.gz"
-            lesion_seg_mask_path = "/app/source/all_outputs/lesion_seg_mask.nii.gz"
-
-            lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
-                                                                         download_name=f"lesion_seg_detection"
-                                                                                       f"-{unique_id}.nii.gz",
-                                                                         copy_only=True)
-            lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
-                                                                    download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
-                                                                    copy_only=True)
-
-        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=False,
-                                       subject_name="Test subject")
-
-        main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
-                                                            lesion_detection=lesion_detection_path,
-                                                            lesion_attention=lesion_attention_path,
-                                                            lesion_detection_seg=lesion_seg_detection_path,
-                                                            lesion_mask_seg=lesion_seg_mask_path,
-                                                            fat_report=fat_report_path,
-                                                            fat_interval=fat_interval)
+# def debug_display_button(workers_selected, fat_interval=None):
+#
+#     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
+#
+#
+#         input_path = '/app/source/all_outputs/lungmask_input.nii.gz'
+#         lungmask_path = '/app/source/all_outputs/lungmask_seg.nii.gz'
+#         fat_report_path = None
+#         muscle_seg_path = None
+#         lesion_detection_path = None
+#         lesion_attention_path = None
+#         lesion_seg_detection_path = None
+#         lesion_seg_mask_path = None
+#
+#         unique_id = utils.get_unique_id()
+#
+#         input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
+#         lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
+#
+#         if CT_FAT_REPORT in workers_selected:
+#             fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
+#             fat_report_path = move_file_to_fileserver_base_dir(fat_report_path,
+#                                                                download_name=f"fat_report-{unique_id}.txt",
+#                                                                copy_only=True)
+#
+#         if CT_MUSCLE_SEGMENTATION in workers_selected:
+#             muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
+#             muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
+#                                                                download_name=f"muscle_seg-{unique_id}.nii.gz",
+#                                                                copy_only=True)
+#
+#         if LESION_DETECTION in workers_selected:
+#             lesion_detection_path = '/app/source/all_outputs/detection_converted-case001.nii.gz'
+#             lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
+#
+#             lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
+#                                                                      download_name=f"lesion_detection"
+#                                                                                    f"-{unique_id}.nii.gz",
+#                                                                      copy_only=True)
+#             lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
+#                                                                      download_name=f"lesion_attention"
+#                                                                                    f"-{unique_id}.nii.gz",
+#                                                                      copy_only=True)
+#
+#         if LESION_DETECTION_SEG in workers_selected:
+#             lesion_seg_detection_path = "/app/source/all_outputs/lesion_seg_detection.nii.gz"
+#             lesion_seg_mask_path = "/app/source/all_outputs/lesion_seg_mask.nii.gz"
+#
+#             lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
+#                                                                          download_name=f"lesion_seg_detection"
+#                                                                                        f"-{unique_id}.nii.gz",
+#                                                                          copy_only=True)
+#             lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
+#                                                                     download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
+#                                                                     copy_only=True)
+#
+#         main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=False,
+#                                        subject_name="Test subject")
+#
+#         main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
+#                                                             lesion_detection=lesion_detection_path,
+#                                                             lesion_attention=lesion_attention_path,
+#                                                             lesion_detection_seg=lesion_seg_detection_path,
+#                                                             lesion_mask_seg=lesion_seg_mask_path,
+#                                                             fat_report=fat_report_path,
+#                                                             fat_interval=fat_interval)
 
 # TODO maybe refactor this
 # TODO get this information from a file
@@ -333,9 +345,10 @@ if __name__ == "__main__":
                     st.text("From 0 (bottom of thorax) to 100 (top of thorax)")
                     fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
-                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, fat_interval=fat_interval)
+                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address,
+                                                     fat_interval=fat_interval)
                 else:
-                    download_and_analyse_button_xnat(subject_name, scan, workers_selected)
+                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address)
 
         except requests.exceptions.ConnectionError as e:
             st.text(f"xnat server {xnat_address} not working")
@@ -346,6 +359,7 @@ if __name__ == "__main__":
         ##### File Selector #####
         st.header("Please Upload the Chest CT Nifti here")
         uploaded_file = st.file_uploader(label="", type=["nii.gz"])
+        subject_name = st.text_input("Enter name of subject")
 
         workers_selected = worker_selection()
 
@@ -354,9 +368,10 @@ if __name__ == "__main__":
             st.text("From 0 (bottom of thorax) to 100 (top of thorax)")
             fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
-            download_and_analyse_button_upload(uploaded_file, workers_selected, fat_interval=fat_interval)
+            download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name,
+                                               fat_interval=fat_interval)
         else:
-            download_and_analyse_button_upload(uploaded_file, workers_selected)
+            download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name)
 
         ##### File Selector #####
 
