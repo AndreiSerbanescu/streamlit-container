@@ -2,6 +2,7 @@ import json
 from common import utils
 import os
 from time import sleep
+import shutil
 
 class CommanderHandler:
 
@@ -26,7 +27,7 @@ class CommanderHandler:
 
     def __watch_for_result_json(self, config_id):
 
-        result_name = f"result-{config_id}"
+        result_name = f"result-{config_id}.json"
 
         while True:
             files = os.listdir(self.result_dir)
@@ -34,7 +35,9 @@ class CommanderHandler:
                 if file == result_name:
                     filepath = os.path.join(self.result_dir, file)
 
-                    return self.__extract_info_from_result_file(filepath)
+                    info = self.__extract_info_from_result_file(filepath)
+                    os.remove(filepath)
+                    return info
 
             sleep(0.5)
 
@@ -43,6 +46,7 @@ class CommanderHandler:
         with open(file) as result_file:
             data = json.load(result_file)
 
+        data = json.loads(data)
         paths = data["paths"]
         workers_not_ready = data["workers_not_ready"]
         workers_failed = data["workers_failed"]

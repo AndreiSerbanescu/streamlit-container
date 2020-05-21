@@ -7,35 +7,49 @@ import SimpleITK as sitk
 from common_display.display.download_button import DownloadDisplayer
 import os
 import numpy as np
-import streamlit
-# from report_generator.pdf_saver import Markdown2Pdf
-# from email_sender.email_sender import EmailSender
+try:
+    import streamlit
+except ImportError:
+    pass
 
+class DummyPdfSaver:
+    def generate_pdf(self, *args, **kwargs):
+        print("WARNING: dummy pdf saver called")
+
+class DummyEmailSender:
+    def send_email(self, email_receiver, subject_name, pdf_path):
+        print(f"WARNING: dummy email sender called for {email_receiver} {subject_name}")
 
 class MainDisplayer:
 
-    def __init__(self, streamlit_wrapper=None, save_to_pdf=True, email_receiver=None,
-                 subject_name=None, pdf_saver_class=None):
+    def __init__(self, streamlit_wrapper=None, save_to_pdf=False, email_receiver_addr=None,
+                 subject_name=None, pdf_saver=None, download_class=None, email_sender=None):
 
         self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
         self.use_st_wrapper = streamlit_wrapper is not None
 
         self.save_to_pdf = save_to_pdf
-        self.email_receiver = email_receiver
-        self.subject_name = "" if subject_name is None else subject_name
+        self.email_receiver = email_receiver_addr
+        self.subject_name = subject_name if subject_name is not None else ""
 
-        self.pdf_saver_class = Markdown2Pdf if pdf_saver_class is None else pdf_saver_class
+        self.pdf_saver = pdf_saver if pdf_saver is not None else DummyPdfSaver()
+        self.download_class = download_class if download_class is not None else DownloadDisplayer
+        self.email_sender = email_sender if email_sender is not None else DummyEmailSender()
 
     def display_volume_and_slice_information(self, input_nifti_path, lung_seg_path, muscle_seg=None,
                                              lesion_detection=None, lesion_attention=None, lesion_detection_seg=None,
                                              lesion_mask_seg=None, fat_report=None, fat_interval=None):
 
-        lungmask_displayer = LungmaskSegmentationDisplayer(input_nifti_path, lung_seg_path, streamlit_wrapper=self.st)
+        lungmask_displayer \
+            = LungmaskSegmentationDisplayer(input_nifti_path, lung_seg_path, streamlit_wrapper=self.st,
+                                            download_displayer=self.download_class(streamlit_wrapper=self.st))
+
         original_array, lung_seg = lungmask_displayer.get_arrays()
 
         # fat_report may be None, in which case fat_report_displayer doesn't display anything
         fat_report_displayer = FatReportDisplayer(original_array, lung_seg, fat_report,
-                                                  fat_interval=fat_interval, streamlit_wrapper=self.st)
+                                                  fat_interval=fat_interval, streamlit_wrapper=self.st,
+                                                  download_displayer=self.download_class(streamlit_wrapper=self.st))
 
         lungmask_displayer.download_button()
         fat_report_displayer.download_button()
@@ -54,28 +68,28 @@ class MainDisplayer:
             detection_array = read_nifti_image(lesion_detection)
             detection_array = sitk.GetArrayFromImage(detection_array)
 
-            detection_download_displayer = DownloadDisplayer()
+            detection_download_displayer = self.download_class(streamlit_wrapper=self.st)
             detection_download_displayer.display(os.path.split(lesion_detection)[1], "Lesion Detection Volume")
 
         if lesion_attention is not None:
             attention_array = read_nifti_image(lesion_attention)
             attention_array = sitk.GetArrayFromImage(attention_array)
 
-            attention_download_displayer = DownloadDisplayer()
+            attention_download_displayer = self.download_class(streamlit_wrapper=self.st)
             attention_download_displayer.display(os.path.split(lesion_attention)[1], "Attention Volume")
 
         if muscle_seg is not None:
             muscle_seg_array = read_nifti_image(muscle_seg)
             muscle_seg_array = sitk.GetArrayFromImage(muscle_seg_array)
 
-            muscle_download_displayer = DownloadDisplayer()
+            muscle_download_displayer = self.download_class(streamlit_wrapper=self.st)
             muscle_download_displayer.display(os.path.split(muscle_seg)[1], "Muscle Segmentation")
 
         if lesion_detection_seg is not None:
             detection_seg_array = read_nifti_image(lesion_detection_seg)
             detection_seg_array = sitk.GetArrayFromImage(detection_seg_array)
 
-            detection_seg_download_displayer = DownloadDisplayer()
+            detection_seg_download_displayer = self.download_class(streamlit_wrapper=self.st)
             detection_seg_download_displayer.display(os.path.split(lesion_detection_seg)[1],
                                                      "Lesion Detection Segmentation")
 
@@ -83,40 +97,36 @@ class MainDisplayer:
             mask_seg_array = read_nifti_image(lesion_mask_seg)
             mask_seg_array = sitk.GetArrayFromImage(mask_seg_array)
 
-            mask_seg_download_displayer = DownloadDisplayer()
+            mask_seg_download_displayer = self.download_class(streamlit_wrapper=self.st)
             mask_seg_download_displayer.display(os.path.split(lesion_mask_seg)[1], "Lesion Detection Mask")
 
         lungmask_displayer.display()
         fat_report_displayer.display()
 
         self.__display_information_rows(original_array, lung_seg, muscle_seg_array, detection_array,
-                                   attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
+                                        attention_array, detection_seg_array, mask_seg_array, fat_report_cm3)
 
-        # if self.save_to_pdf:
-        #     pdf_path = self.__save_to_pdf()
-        #
-        #     self.__send_email(pdf_path)
-    #
-    # def __send_email(self, pdf_path):
-    #
-    #     if self.email_receiver is None:
-    #         print(f"No email receiver - not sending email")
-    #         return
-    #
-    #     email_sender = EmailSender()
-    #     email_sender.send_email(self.email_receiver, self.subject_name, pdf_path)
-    #
-    # def __save_to_pdf(self):
-    #     assert self.use_st_wrapper
-    #
-    #     report_dir = self.st.generate_markdown_report()
-    #
-    #     pdf_generator = self.pdf_saver_class(report_dir)
-    #
-    #     pdf_path = pdf_generator.generate_pdf()
-    #     print(f"generated report pdf path {pdf_path}")
-# /
-#         return pdf_path
+        if self.save_to_pdf:
+            pdf_path = self.__save_to_pdf()
+
+            self.__send_email(pdf_path)
+
+    def __send_email(self, pdf_path):
+
+        if self.email_receiver is None:
+            print(f"No email receiver - not sending email")
+            return
+
+        self.email_sender.send_email(self.email_receiver, self.subject_name, pdf_path)
+
+    def __save_to_pdf(self):
+        assert self.use_st_wrapper
+
+        report_dir = self.st.generate_markdown_report()
+
+        pdf_path = self.pdf_saver.generate_pdf(report_dir)
+
+        return pdf_path
 
 
     def __display_information_rows(self, original_array, lung_seg, muscle_seg, detection_array, attention_array,

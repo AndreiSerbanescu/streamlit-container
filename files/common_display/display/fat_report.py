@@ -1,4 +1,8 @@
-import streamlit
+try:
+    import streamlit
+except ImportError:
+    pass
+
 from functools import reduce
 import operator
 import numpy as np
@@ -40,7 +44,8 @@ class FatReportDisplayer:
         self.sat_vols = [elem['satVol'] for elem in self.fat_report]
         self.vat_vols = [elem['vatVol'] for elem in self.fat_report]
 
-        self.download_displayer = download_displayer if download_displayer is not None else DownloadDisplayer()
+        self.download_displayer = download_displayer if download_displayer is not None \
+            else DownloadDisplayer(streamlit_wrapper=self.st)
 
     def download_button(self):
         if self.fat_report is None:

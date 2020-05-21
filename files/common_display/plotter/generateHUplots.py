@@ -1,6 +1,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import streamlit as st
+try:
+    import streamlit as st
+except ImportError:
+    pass
 
 x = np.array([-1008.76, -993.52, -978.28, -963.04, -947.8, -932.56, -917.32, -902.08
 , -886.84, -871.6, -856.36, -841.12, -825.88, -810.64, -795.4, -780.16

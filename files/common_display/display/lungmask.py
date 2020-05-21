@@ -4,7 +4,11 @@ import SimpleITK as sitk
 from common_display.nifti_reader import *
 import os
 from common_display.display.download_button import DownloadDisplayer
-import streamlit
+try:
+    import streamlit
+except ImportError:
+    pass
+
 
 class LungmaskSegmentationDisplayer:
 
@@ -21,7 +25,8 @@ class LungmaskSegmentationDisplayer:
         self.original_array     = sitk.GetArrayFromImage(self.original_nifti)
         self.segmentation_array = sitk.GetArrayFromImage(self.segmentation_nifti)
 
-        self.download_displayer = download_displayer if download_displayer is not None else DownloadDisplayer()
+        self.download_displayer = download_displayer if download_displayer is not None \
+            else DownloadDisplayer(streamlit_wrapper=self.st)
 
     def display(self):
         spx, spy, spz = self.original_nifti.GetSpacing()
