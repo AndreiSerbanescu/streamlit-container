@@ -68,7 +68,8 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     config_in_dir = os.path.join(commander_share_path, "config")
     result_dir = os.path.join(commander_share_path, "result")
 
-    ch = CommanderHandler(config_in_dir, result_dir)
+    # TODO remove email hardcoding
+    ch = CommanderHandler(config_in_dir, result_dir, email_receiver="andreis120@gmail.com")
     paths, workers_not_ready, workers_failed \
         = ch.call_commander("test subject name", source_dir, workers_selected, fat_interval)
 

@@ -5,16 +5,17 @@ from time import sleep
 
 class CommanderHandler:
 
-    def __init__(self, config_in_dir, result_dir):
+    def __init__(self, config_in_dir, result_dir, email_receiver=None):
         self.config_in_dir = config_in_dir
         self.result_dir = result_dir
+        self.email_receiver = email_receiver
 
         os.makedirs(config_in_dir, exist_ok=True)
         os.makedirs(result_dir, exist_ok=True)
 
-    def call_commander(self, project_name, soure_dir, workers_selected, fat_interval):
+    def call_commander(self, subject_name, soure_dir, workers_selected, fat_interval):
 
-        config_json = self.__generate_config_json(project_name, soure_dir, workers_selected, fat_interval)
+        config_json = self.__generate_config_json(subject_name, soure_dir, workers_selected, fat_interval)
         config_id = utils.get_unique_id()
 
         config_name = f"config-{config_id}.json"
@@ -54,15 +55,18 @@ class CommanderHandler:
         with open(config_fullpath, 'w') as outfile:
             json.dump(config_json, outfile)
 
-    def __generate_config_json(self, project_name, source_dir, workers_selected, fat_interval):
+    def __generate_config_json(self, subject_name, source_dir, workers_selected, fat_interval):
 
         contents = {
             "source_filepath": source_dir,
-            "project_name": project_name,
+            "subject_name": subject_name,
             "workers_selected": workers_selected
         }
 
         if fat_interval is not None:
             contents["fat_interval"] = fat_interval
+
+        if self.email_receiver is not None:
+            contents["email_receiver"] = self.email_receiver
 
         return json.dumps(contents)
