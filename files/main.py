@@ -68,7 +68,6 @@ def start_download_and_analyse(source_dir, workers_selected, fat_interval=None):
     config_in_dir = os.path.join(commander_share_path, "config")
     result_dir = os.path.join(commander_share_path, "result")
 
-    # TODO remove email hardcoding
     ch = CommanderHandler(config_in_dir, result_dir, email_receiver="andreis120@gmail.com")
     paths, workers_not_ready, workers_failed \
         = ch.call_commander("test subject name", source_dir, workers_selected, fat_interval)
@@ -218,8 +217,8 @@ def debug_display_button(workers_selected, fat_interval=None):
                                                                     download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
                                                                     copy_only=True)
 
-        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=True,
-                                       email_receiver="andreis120@gmail.com", subject_name="Test subject")
+        main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=False,
+                                       subject_name="Test subject")
 
         main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                             lesion_detection=lesion_detection_path,

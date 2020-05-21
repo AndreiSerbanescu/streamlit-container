@@ -51,6 +51,9 @@ class CommanderHandler:
         workers_not_ready = data["workers_not_ready"]
         workers_failed = data["workers_failed"]
 
+        # TODO delete
+        shutil.move(file, f"{file}.old")
+
         return paths, workers_not_ready, workers_failed
 
     def __write_config(self, config_fullpath, config_json):
