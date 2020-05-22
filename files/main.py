@@ -101,8 +101,7 @@ def display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_
         return
 
 
-    # TODO add real subject name
-    main_displayer = MainDisplayer(save_to_pdf=False, subject_name="Test subject")
+    main_displayer = MainDisplayer(save_to_pdf=False)
 
     main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
                                                         lesion_detection=lesion_detection_path,
@@ -125,9 +124,18 @@ def __display_worker_failed(hostname, streamlit_wrapper=None):
     st_wrap = streamlit_wrapper if streamlit_wrapper is not None else streamlit
     st_wrap.markdown(f"**{hostname} worker failed**")
 
-def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address, fat_interval=None):
+def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address, fat_interval=None,
+                                     send_email=False):
+
     if st.button('download and analyse', key="xnat-download-button"):
         latest_iteration = st.empty()
+
+        if email_address == "":
+            st.markdown('## No email address specified - no email will be sent')
+
+            if send_email:
+                st.markdown("## Please tick *Don't send email* if you wish to continue")
+                return
 
         bar = st.progress(0)
 
@@ -149,7 +157,8 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email
 
 
 
-def download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name, fat_interval=None):
+def download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name,
+                                       fat_interval=None, send_email=False):
 
     if st.button('download and analyse', key="uploaded download button"):
         file_type = ".nii.gz"
@@ -163,8 +172,16 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, email_ad
                 st.markdown("## No file uploaded**")
                 return
 
-        if subject_name is None:
+        if subject_name == "":
             st.markdown("## Please enter subject name")
+            return
+
+        if email_address == "":
+            st.markdown('## No email address specified - no email will be sent')
+
+            if send_email:
+                st.markdown("## Please tick *Don't send email* if you wish to continue")
+                return
 
         source_dir = os.path.split(filename)[1]
 
@@ -268,12 +285,6 @@ if __name__ == "__main__":
     pcr_positive = st.checkbox("PCR Positive?")
     seropositive = st.checkbox("Seropositive?")
 
-    send_email = st.checkbox("Send email")
-
-    email_address = None
-    if send_email:
-        email_address = st.text_input("Enter email address for sending the report")
-
     #### Page Header #####
 
     ##### Sidebar ######
@@ -338,6 +349,11 @@ if __name__ == "__main__":
                 res_name = st.selectbox('Resources', sen)
                 resource = scan.resources[res_name]
 
+                dont_send_email = st.checkbox("Don't send email")
+                email_address = None
+                if not dont_send_email:
+                    email_address = st.text_input("Enter email address for sending the report")
+
                 workers_selected = worker_selection()
 
                 if CT_FAT_REPORT in workers_selected:
@@ -346,9 +362,10 @@ if __name__ == "__main__":
                     fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
                     download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address,
-                                                     fat_interval=fat_interval)
+                                                     fat_interval=fat_interval, send_email=not dont_send_email)
                 else:
-                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address)
+                    download_and_analyse_button_xnat(subject_name, scan, workers_selected, email_address,
+                                                     send_email=not dont_send_email)
 
         except requests.exceptions.ConnectionError as e:
             st.text(f"xnat server {xnat_address} not working")
@@ -361,6 +378,11 @@ if __name__ == "__main__":
         uploaded_file = st.file_uploader(label="", type=["nii.gz"])
         subject_name = st.text_input("Enter name of subject")
 
+        dont_send_email = st.checkbox("Don't send email")
+        email_address = None
+        if not dont_send_email:
+            email_address = st.text_input("Enter email address for sending the report")
+
         workers_selected = worker_selection()
 
         if CT_FAT_REPORT in workers_selected:
@@ -369,9 +391,10 @@ if __name__ == "__main__":
             fat_interval = st.slider("Fat report slider", .0, 100.0, (25.0, 75.0))
 
             download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name,
-                                               fat_interval=fat_interval)
+                                               fat_interval=fat_interval, send_email=not dont_send_email)
         else:
-            download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name)
+            download_and_analyse_button_upload(uploaded_file, workers_selected, email_address, subject_name,
+                                               send_email=not dont_send_email)
 
         ##### File Selector #####
 
