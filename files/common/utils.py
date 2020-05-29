@@ -13,7 +13,9 @@ def setup_logging():
     stream_handler = logging.StreamHandler(sys.stdout)
 
     file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    stream_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    # stream_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    stream_handler.setFormatter(logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s"))
+
 
     logging.basicConfig(
         level=logging.DEBUG, # TODO level=get_logging_level(),
