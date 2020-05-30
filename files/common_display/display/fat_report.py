@@ -15,7 +15,7 @@ import os
 
 class FatReportDisplayer:
 
-    def __init__(self, original_array, lung_seg_array, fat_report_path=None, fat_interval=None,
+    def __init__(self, original_array, fat_report_path=None, fat_interval=None,
                  download_displayer=None, streamlit_wrapper=None):
 
         if fat_report_path is None:
@@ -25,7 +25,6 @@ class FatReportDisplayer:
         self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
 
         self.original_array = original_array
-        self.lung_seg_array = lung_seg_array
         self.fat_report_path = fat_report_path
         self.fat_report = self.__read_and_convert_report_to_cm3()
         self.fat_interval = fat_interval
@@ -85,9 +84,6 @@ class FatReportDisplayer:
 
             self.__display_agg_info(from_slice, to_slice)
 
-
-        self.__display_confidence_interval()
-
     def get_converted_report(self):
         return self.fat_report
 
@@ -107,9 +103,6 @@ class FatReportDisplayer:
         self.st.text(f"visceral volume: {vat_tissue_cm3:.2f} cm3")
         self.st.text(f"subcutaneous volume: {sat_tissue_cm3:.2f} cm3")
 
-    def __display_confidence_interval(self):
-        #TODO implement
-        pass
 
     def __read_and_convert_report_to_cm3(self):
 
@@ -165,11 +158,11 @@ class FatReportDisplayer:
         cm = plt.get_cmap('gray')
         yd = self.original_array.shape[1]
         frontal_slice_original = self.original_array[:, yd // 2, :]
-        frontal_slice_lungmask = self.lung_seg_array[:, yd // 2, :]
 
-        mskmax = frontal_slice_original[frontal_slice_lungmask > 0].max()
-        mskmin = frontal_slice_original[frontal_slice_lungmask > 0].min()
+        mskmax = frontal_slice_original.max()
+        mskmin = frontal_slice_original.min()
         im_arr = (frontal_slice_original[:, :].astype(float) - mskmin) * (1.0 / (mskmax - mskmin))
+
         im_arr = np.uint8(cm(im_arr) * 255)
         im = Image.fromarray(im_arr).convert('RGB')
 

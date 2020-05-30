@@ -88,6 +88,14 @@ def start_download_and_analyse(source_dir, workers_selected, email_address, subj
     else:
         st.text(f"Email with report sent to {email_address}")
 
+
+    workers_unsuccessful = workers_not_ready + workers_failed
+    if len(workers_unsuccessful) > 0:
+        st.text("The following workers were unsuccessful:")
+        for worker in workers_unsuccessful:
+            st.text(worker)
+        st.text('')
+
     display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_path, lesion_attention_path,
                    lesion_seg_detection_path, lesion_seg_mask_path, fat_report_path, fat_interval)
 
@@ -95,9 +103,8 @@ def start_download_and_analyse(source_dir, workers_selected, email_address, subj
 def display_report(input_path, lungmask_path, muscle_seg_path, lesion_detection_path, lesion_attention_path,
                    lesion_seg_detection_path, lesion_seg_mask_path, fat_report_path, fat_interval):
 
-    if input_path is None or lungmask_path is None:
-        st.markdown("**Cannot display**")
-        st.markdown("**Lungmask segmentation failed**")
+    if input_path is None:
+        st.markdown("**Internal error occured - cannot display**")
         return
 
 
@@ -267,13 +274,13 @@ def worker_selection():
     # worker_methods, worker_names = get_worker_information()
     worker_names = get_worker_names()
 
-    worker_names.remove(LUNGMASK_SEGMENT)
+    # worker_names.remove(LUNGMASK_SEGMENT)
 
-    st.text("Running lungmask segmentation by default")
+    # st.text("Running lungmask segmentation by default")
     workers_selected = st.multiselect('Containers', worker_names)
 
     # lungmask segment runs by default
-    workers_selected.append(LUNGMASK_SEGMENT)
+    # workers_selected.append(LUNGMASK_SEGMENT)
     return workers_selected
 
 

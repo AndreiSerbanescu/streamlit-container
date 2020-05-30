@@ -14,6 +14,10 @@ class LungmaskSegmentationDisplayer:
 
     def __init__(self, original_nifti_path, segmentation_nifti_path, download_displayer=None, streamlit_wrapper=None):
 
+        if segmentation_nifti_path is None:
+            self.segmentation_nifti = None
+            return
+
         self.st = streamlit if streamlit_wrapper is None else streamlit_wrapper
 
         self.original_path = original_nifti_path
@@ -29,6 +33,10 @@ class LungmaskSegmentationDisplayer:
             else DownloadDisplayer(streamlit_wrapper=self.st)
 
     def display(self):
+
+        if self.segmentation_nifti is None:
+            return
+
         spx, spy, spz = self.original_nifti.GetSpacing()
 
         self.st.header("HU distribution:")
@@ -47,8 +55,14 @@ class LungmaskSegmentationDisplayer:
                             [https://arxiv.org/abs/2001.11767](https://arxiv.org/abs/2001.11767)')
 
     def download_button(self):
-        self.download_displayer.display(os.path.split(self.original_path)[1], "Original volumetric image")
+        if self.segmentation_nifti is None:
+            return
+
         self.download_displayer.display(os.path.split(self.segmentation_path)[1], "Lung segmentation mask")
 
-    def get_arrays(self):
-        return self.original_array, self.segmentation_array
+    def get_seg_array(self):
+
+        if self.segmentation_nifti is None:
+            return None
+
+        return self.segmentation_array
