@@ -3,10 +3,10 @@ import sys
 import os
 import subprocess as sb
 import time
-import random
+from threading import get_ident
 
 def get_unique_id():
-    return str(time.time()) + "-" + str(random.randint(0, 10000000))
+    return str(time.time()) + "-" + str(get_ident())
 
 def setup_logging():
     file_handler = logging.FileHandler("../log.log")
@@ -15,7 +15,6 @@ def setup_logging():
     file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
     # stream_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
     stream_handler.setFormatter(logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s"))
-
 
     logging.basicConfig(
         level=logging.DEBUG, # TODO level=get_logging_level(),
@@ -29,7 +28,12 @@ def setup_logging():
 def mark_yourself_ready():
     hostname = os.environ['HOSTNAME']
     data_share_path = os.environ['DATA_SHARE_PATH']
-    cmd = "touch {}/{}_ready.txt".format(data_share_path, hostname)
+
+    ready_directory = os.path.join(data_share_path, "containers_ready")
+    os.makedirs(ready_directory, exist_ok=True)
+
+    ready_filepath = os.path.join(ready_directory, f"{hostname}_ready.txt")
+    cmd = f"touch {ready_filepath}"
 
     logging.info("Marking as ready")
     sb.call([cmd], shell=True)
@@ -40,11 +44,11 @@ def log_info(*msg):
 def log_debug(*msgs):
     logging.debug(__get_print_statement(*msgs))
 
-def log_critica(*msg):
-    logging.critical(__get_print_statement(*msg))
-
 def log_warning(*msg):
     logging.warning(__get_print_statement(*msg))
+
+def log_error(*msg):
+    logging.error(__get_print_statement(*msg))
 
 def log_critical(*msg):
     logging.critical(__get_print_statement(*msg))
