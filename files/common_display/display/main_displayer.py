@@ -147,7 +147,7 @@ class MainDisplayer:
 
             self.st.markdown(muscle_citation)
 
-        original_imgs = self.get_slices_from_volume(original_array, lung_seg)
+        original_imgs = self.get_slices_from_volume(original_array, high_contrast=True)
 
         tuple_imgs = [original_imgs]
         captions = ["Volume"]
@@ -163,17 +163,17 @@ class MainDisplayer:
             captions.append("Muscle Mask")
 
         if detection_array is not None:
-            detection_imgs = self.get_slices_from_volume(detection_array, lung_seg)
+            detection_imgs = self.get_slices_from_volume(detection_array, high_contrast=True)
             tuple_imgs.append(detection_imgs)
             captions.append("Lesion Detection - Detection Boxes")
 
         if attention_array is not None:
-            attention_imgs = self.get_slices_from_volume(attention_array, lung_seg)
+            attention_imgs = self.get_slices_from_volume(attention_array, high_contrast=False)
             tuple_imgs.append(attention_imgs)
             captions.append("Lesion Detection - Attention")
 
         if detection_seg_array is not None:
-            detection_seg_imgs = self.get_slices_from_volume(detection_seg_array, lung_seg)
+            detection_seg_imgs = self.get_slices_from_volume(detection_seg_array, high_contrast=True)
             tuple_imgs.append(detection_seg_imgs)
             captions.append("Lesion Detection Segmentation - Detection Boxes")
 
@@ -216,17 +216,21 @@ class MainDisplayer:
         return imgs
 
 
-    def get_slices_from_volume(self, original_array, lung_seg):
+
+    def get_slices_from_volume(self, original_array, high_contrast=False):
         imgs = []
         cm = plt.get_cmap('gray')
         zd = original_array.shape[0]
 
-        if lung_seg is not None:
-            mskmax = original_array[lung_seg > 0].max()
-            mskmin = original_array[lung_seg > 0].min()
-        else:
-            mskmax = original_array.max()
-            mskmin = original_array.min()
+        if high_contrast:
+            perc_low = np.percentile(original_array, 5, keepdims=True)
+            perc_high = np.percentile(original_array, 95, keepdims=True)
+
+            # Clip array with different limits across the z dimension
+            original_array = np.clip(original_array, a_min=perc_low, a_max=perc_high)
+
+        mskmax = original_array.max()
+        mskmin = original_array.min()
 
         for i in range(zd):
 
