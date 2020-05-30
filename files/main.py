@@ -337,11 +337,15 @@ if __name__ == "__main__":
         try:
             with xnat.connect(xnat_address, user=xnat_user, password=xnat_password) as session:
 
-                pn = [x.name for x in session.projects.values()]
+                #pn = [x.name for x in session.projects.values()]
+                pn = ["COVID-19"]
+
                 project_name = st.selectbox('Project', pn)
                 project = session.projects[project_name]
 
                 sn = [x.label for x in project.subjects.values()]
+                sn.remove("coronacases_org_001")
+                
                 subject_name = st.selectbox('Subject', sn)
                 subject = project.subjects[subject_name]
 
