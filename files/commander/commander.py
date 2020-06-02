@@ -50,8 +50,7 @@ class CommanderHandler:
         workers_not_ready = data["workers_not_ready"]
         workers_failed = data["workers_failed"]
 
-        # TODO delete
-        shutil.move(file, f"{file}.old")
+        os.remove(file)
 
         return paths, workers_not_ready, workers_failed
 
