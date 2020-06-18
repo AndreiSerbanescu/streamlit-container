@@ -8,6 +8,7 @@ import requests
 from common_display.display.main_displayer import MainDisplayer
 from common import utils
 from commander.commander import CommanderHandler
+import shutil
 
 LUNGMASK_SEGMENT = "Lungmask Segmentation"
 CT_FAT_REPORT = "CT Fat Report"
@@ -146,7 +147,9 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email
 
         bar = st.progress(0)
 
-        dir_ = os.path.join('/tmp/', subject_name)
+        tmp_dir_name = subject_name + "-" + utils.get_unique_id()
+
+        dir_ = os.path.join('/tmp/', tmp_dir_name)
         scan.download_dir(dir_, verbose=True)
         download_dir = ''
         for path in Path(dir_).rglob('*.dcm'):
@@ -157,10 +160,12 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email
         st.text('Analysis progress...')
 
         source_dir = copy_files_to_shared_directory(download_dir)
+
+        # delete input files from tmp directory
+        shutil.rmtree(os.path.join("/tmp", tmp_dir_name))
+
         start_download_and_analyse(source_dir, workers_selected, email_address, subject_name=subject_name,
                                    fat_interval=fat_interval)
-
-    # debug_display_button(workers_selected, fat_interval=fat_interval)
 
 
 
@@ -195,77 +200,6 @@ def download_and_analyse_button_upload(uploaded_file, workers_selected, email_ad
         start_download_and_analyse(source_dir, workers_selected, email_address, subject_name=subject_name,
                                    fat_interval=fat_interval)
 
-    # debug_display_button(workers_selected, fat_interval=fat_interval)
-
-# def debug_display_button(workers_selected, fat_interval=None):
-#
-#     if os.environ.get('DEBUG', '') == '1' and st.button('Show Worker Display'):
-#
-#
-#         input_path = '/app/source/all_outputs/lungmask_input.nii.gz'
-#         lungmask_path = '/app/source/all_outputs/lungmask_seg.nii.gz'
-#         fat_report_path = None
-#         muscle_seg_path = None
-#         lesion_detection_path = None
-#         lesion_attention_path = None
-#         lesion_seg_detection_path = None
-#         lesion_seg_mask_path = None
-#
-#         unique_id = utils.get_unique_id()
-#
-#         input_path = move_file_to_fileserver_base_dir(input_path, copy_only=True)
-#         lungmask_path = move_file_to_fileserver_base_dir(lungmask_path, copy_only=True)
-#
-#         if CT_FAT_REPORT in workers_selected:
-#             fat_report_path = '/app/source/all_outputs/fat_report_converted_case001.txt'
-#             fat_report_path = move_file_to_fileserver_base_dir(fat_report_path,
-#                                                                download_name=f"fat_report-{unique_id}.txt",
-#                                                                copy_only=True)
-#
-#         if CT_MUSCLE_SEGMENTATION in workers_selected:
-#             muscle_seg_path = '/app/source/all_outputs/muscle_segment_converted_case001.nii.gz'
-#             muscle_seg_path = move_file_to_fileserver_base_dir(muscle_seg_path,
-#                                                                download_name=f"muscle_seg-{unique_id}.nii.gz",
-#                                                                copy_only=True)
-#
-#         if LESION_DETECTION in workers_selected:
-#             lesion_detection_path = '/app/source/all_outputs/detection_converted-case001.nii.gz'
-#             lesion_attention_path = '/app/source/all_outputs/attention_converted-case001.nii.gz'
-#
-#             lesion_detection_path = move_file_to_fileserver_base_dir(lesion_detection_path,
-#                                                                      download_name=f"lesion_detection"
-#                                                                                    f"-{unique_id}.nii.gz",
-#                                                                      copy_only=True)
-#             lesion_attention_path = move_file_to_fileserver_base_dir(lesion_attention_path,
-#                                                                      download_name=f"lesion_attention"
-#                                                                                    f"-{unique_id}.nii.gz",
-#                                                                      copy_only=True)
-#
-#         if LESION_DETECTION_SEG in workers_selected:
-#             lesion_seg_detection_path = "/app/source/all_outputs/lesion_seg_detection.nii.gz"
-#             lesion_seg_mask_path = "/app/source/all_outputs/lesion_seg_mask.nii.gz"
-#
-#             lesion_seg_detection_path = move_file_to_fileserver_base_dir(lesion_seg_detection_path,
-#                                                                          download_name=f"lesion_seg_detection"
-#                                                                                        f"-{unique_id}.nii.gz",
-#                                                                          copy_only=True)
-#             lesion_seg_mask_path = move_file_to_fileserver_base_dir(lesion_seg_mask_path,
-#                                                                     download_name=f"lesion_seg_mask-{unique_id}.nii.gz",
-#                                                                     copy_only=True)
-#
-#         main_displayer = MainDisplayer(streamlit_wrapper=PandocStreamlitWrapper(), save_to_pdf=False,
-#                                        subject_name="Test subject")
-#
-#         main_displayer.display_volume_and_slice_information(input_path, lungmask_path, muscle_seg=muscle_seg_path,
-#                                                             lesion_detection=lesion_detection_path,
-#                                                             lesion_attention=lesion_attention_path,
-#                                                             lesion_detection_seg=lesion_seg_detection_path,
-#                                                             lesion_mask_seg=lesion_seg_mask_path,
-#                                                             fat_report=fat_report_path,
-#                                                             fat_interval=fat_interval)
-
-# TODO maybe refactor this
-# TODO get this information from a file
 def get_worker_names():
     return [LUNGMASK_SEGMENT, CT_FAT_REPORT, CT_MUSCLE_SEGMENTATION,
             LESION_DETECTION, LESION_DETECTION_SEG]
