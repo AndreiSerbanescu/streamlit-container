@@ -60,7 +60,8 @@ def copy_files_to_shared_directory(source_dir):
     return os.path.join(input, "files")
 
 
-def start_download_and_analyse(source_dir, workers_selected, email_address, subject_name="", fat_interval=None):
+def start_download_and_analyse(source_dir, workers_selected, email_address, subject_name="", fat_interval=None,
+                               is_xnat=False):
 
     if len(workers_selected) == 0:
         st.markdown("**Need to select at least one container**")
@@ -73,6 +74,16 @@ def start_download_and_analyse(source_dir, workers_selected, email_address, subj
     ch = CommanderHandler(config_in_dir, result_dir, email_receiver=email_address)
     paths, workers_not_ready, workers_failed \
         = ch.call_commander(subject_name, source_dir, workers_selected, fat_interval)
+
+
+    if is_xnat:
+        # deletes input dicom files
+        # source_dir will be of form /[data_share]/streamlit_input[unique_id]/files
+        source_dir_base = os.path.split(source_dir)[0]
+        data_share = os.environ["DATA_SHARE_PATH"]
+        source_dir_base = os.path.join(data_share, source_dir_base)
+        shutil.rmtree(source_dir_base)
+
 
     lungmask_path = paths.get("lungmask")
     input_path = paths.get("input")
@@ -165,7 +176,7 @@ def download_and_analyse_button_xnat(subject_name, scan, workers_selected, email
         shutil.rmtree(os.path.join("/tmp", tmp_dir_name))
 
         start_download_and_analyse(source_dir, workers_selected, email_address, subject_name=subject_name,
-                                   fat_interval=fat_interval)
+                                   fat_interval=fat_interval, is_xnat=True)
 
 
 
